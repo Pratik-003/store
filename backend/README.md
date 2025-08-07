@@ -53,4 +53,41 @@ python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
 
+
+
+
+
+
+
+
+
+
+
+psql -U postgres
+CREATE DATABASE pratikstore
+CREATE USER pratikstore WITH PASSWORD '1234';
+
+ALTER ROLE pratikstore SET client_encoding TO 'utf8';
+ALTER ROLE pratikstore SET default_transaction_isolation TO 'read committed';
+ALTER ROLE pratikstore SET timezone TO 'UTC';
+GRANT ALL PRIVILEGES ON DATABASE pratikstore TO pratikstore;
+\q
+
+pip install requiremetns.txt
+
+django-admin startproject admin .
+python manage.py startapp products
+
+python manage.py makemigrations
+python manage.py migrate
+
+
+
+
+
+
+
+
+
+
 MIT License — free for personal and commercial use.

@@ -1,1 +1,124 @@
-node_modules
+backend/.env
+backend/venv
+# Django
+*.pyc
+*__pycache__/
+*.sqlite3
+*.pyo
+*.pyd
+*.log
+local_settings.py
+db.sqlite3
+media/
+staticfiles/
+.DS_Store
+.env
+.env.local
+.venv
+venv/
+env/
+
+# Backup files
+*.bak
+*.swp
+*~
+
+# IDE specific
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Frontend (general)
+node_modules/
+dist/
+build/
+.cache/
+.sass-cache/
+*.css.map
+*.js.map
+
+# Logs
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage
+coverage/
+
+# Virtual environment
+venv/
+ENV/
+
+# Database migrations (optional)
+*/migrations/*.py
+!*/migrations/__init__.py
+
+# Python
+*.py[cod]
+__pycache__/
+*.so
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFESTvenv/
+__pycache__/
+*.pyc
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.py,cover
+.pytest_cache/
+.mypy_cache/
+
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+venv.bak/
+.venv.bak/
+
+# Django
+*.log
+*.pot
+*.sqlite3
+*.sqlite
+db.sqlite3
+media/
+staticfiles/
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Frontend (if applicable)
+node_modules/
+dist/
+build/
+.sass-cache/
+.cache/
+

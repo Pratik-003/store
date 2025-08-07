@@ -1,0 +1,260 @@
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from django.core.mail import send_mail
+from django.conf import settings
+from .models import User, OTP
+from .serializers import (
+    UserSerializer, 
+    RegisterSerializer, 
+    MyTokenObtainPairSerializer,
+    OTPSerializer
+)
+import pyotp
+import random
+import string
+
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import MyTokenObtainPairSerializer
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
+    
+    
+def generate_user_id():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+
+class RegisterView(APIView):
+    serializer_class = RegisterSerializer 
+    """
+    Register a new user.
+    
+    ---
+    # Swagger documentation
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+                example: "john_doe"
+              email:
+                type: string
+                format: email
+                example: "user@example.com"
+              password:
+                type: string
+                format: password
+                example: "securepassword123"
+            required:
+              - username
+              - email
+              - password
+    
+    responses:
+      201:
+        description: User created
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                user:
+                  $ref: '#/components/schemas/User'
+      400:
+        description: Invalid input
+  """
+    
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            user.userid = generate_user_id()
+            user.save()
+            
+            # Create OTP for the user
+            otp = OTP.create_otp_for_user(user)
+            otp_code = otp.generate_otp()
+            
+            # Send OTP via email
+            send_mail(
+                'Your OTP for Account Verification',
+                f'Your OTP is: {otp_code}',
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+            
+            return Response({
+                'message': 'User registered successfully. Please verify your email with OTP.',
+                'user': UserSerializer(user).data
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class VerifyOTPView(APIView):
+    serializer_class = OTPSerializer
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        email = request.data.get('email')
+        otp_code = request.data.get('otp')
+        
+        if not email or not otp_code:
+            return Response(
+                {'error': 'Email and OTP are required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = User.objects.get(email=email)
+            otp = OTP.objects.get(user=user)
+            
+            if otp.verify_otp(otp_code):
+                otp.is_verified = True
+                otp.save()
+                user.is_active = True
+                user.save()
+                
+                # Generate tokens
+                refresh = MyTokenObtainPairSerializer.get_token(user)
+                
+                return Response({
+                    'message': 'OTP verified successfully.',
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
+                    'user': UserSerializer(user).data
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response(
+                    {'error': 'Invalid OTP or OTP expired.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User with this email does not exist.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except OTP.DoesNotExist:
+            return Response(
+                {'error': 'No OTP found for this user.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+class LoginView(APIView):
+    serializer_class = MyTokenObtainPairSerializer
+    """
+    Authenticate user and return JWT tokens.
+    
+    ---
+    # Swagger documentation (YAML format)
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              email:
+                type: string
+                format: email
+                example: user@example.com
+              password:
+                type: string
+                format: password
+                example: securepassword123
+            required:
+              - email
+              - password
+    
+    responses:
+      200:
+        description: Login successful
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                access:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                refresh:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                user:
+                  $ref: '#/components/schemas/User'
+      401:
+        description: Invalid credentials or unverified account
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "Invalid credentials."
+    """
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        user = authenticate(email=email, password=password)
+        
+        if user is None:
+            return Response(
+                {'error': 'Invalid credentials.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        if not user.is_active:
+            return Response(
+                {'error': 'Account not verified. Please verify your email.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        try:
+            refresh = MyTokenObtainPairSerializer.get_token(user)
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'user': UserSerializer(user).data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {'error': f'Token generation failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class UserProfileView(APIView):
+    serializer_class = UserSerializer 
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class AdminDashboardView(APIView):
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        if not request.user.is_admin:
+            return Response(
+                {'error': 'You are not authorized to access this resource.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        users = User.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
