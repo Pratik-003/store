@@ -64,7 +64,7 @@ python manage.py runserver
 
 
 psql -U postgres
-CREATE DATABASE pratikstore
+CREATE DATABASE pratikstore;
 CREATE USER pratikstore WITH PASSWORD '1234';
 
 ALTER ROLE pratikstore SET client_encoding TO 'utf8';
