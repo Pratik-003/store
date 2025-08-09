@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation"; // 1. Import useRouter
 
 const ErrorMessage = ({ message }: { message: string }) => (
   <div
@@ -16,6 +17,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter(); // 2. Initialize the router
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -34,12 +36,19 @@ const Login = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.message || "Invalid credentials. Please try again."
-        );
+        // Use a more specific error message from the API if available
+        const errorMessage = data.detail || data.message || "Invalid credentials. Please try again.";
+        throw new Error(errorMessage);
       }
 
-      console.log("Login successful!", data);
+      // 3. Add redirection logic
+      // After successful login, redirect based on is_admin flag
+      if (data.user && data.user.is_admin) {
+        router.push("/admin"); // Redirect to admin dashboard
+      } else {
+        router.push("/"); // Redirect to user homepage
+      }
+
     } catch (err: any) {
       setError(err.message);
     } finally {
