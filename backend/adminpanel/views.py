@@ -24,9 +24,6 @@ class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
     
     
-def generate_user_id():
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
-
 class RegisterView(APIView):
     serializer_class = RegisterSerializer 
     """
@@ -79,8 +76,6 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            user.userid = generate_user_id()
-            user.save()
             
             # Create OTP for the user
             otp = OTP.create_otp_for_user(user)

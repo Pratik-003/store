@@ -37,15 +37,29 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['userid', 'username', 'email', 'is_admin', 'created_at']
         read_only_fields = ['userid', 'created_at']
 
+
+import uuid
+def generate_unique_userid():
+    # This generates a short, unique ID. You can customize this logic.
+    return uuid.uuid4().hex[:4].upper()
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
     
     class Meta:
         model = User
         fields = ['username', 'email', 'password']
+
+    def validate_email(self, value):
+      
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("This email is already registered.")
+        return value
     
     def create(self, validated_data):
         user = User.objects.create_user(
+            userid=generate_unique_userid(),
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password']
