@@ -16,9 +16,15 @@ from .serializers import (
 import pyotp
 import random
 import string
+import logging
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import MyTokenObtainPairSerializer
+
+
+logger = logging.getLogger(__name__)
+
+
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
@@ -147,89 +153,94 @@ class VerifyOTPView(APIView):
 
 class LoginView(APIView):
     serializer_class = MyTokenObtainPairSerializer
-    """
-    Authenticate user and return JWT tokens.
-    
-    ---
-    # Swagger documentation (YAML format)
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              email:
-                type: string
-                format: email
-                example: user@example.com
-              password:
-                type: string
-                format: password
-                example: securepassword123
-            required:
-              - email
-              - password
-    
-    responses:
-      200:
-        description: Login successful
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                access:
-                  type: string
-                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                refresh:
-                  type: string
-                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                user:
-                  $ref: '#/components/schemas/User'
-      401:
-        description: Invalid credentials or unverified account
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                error:
-                  type: string
-                  example: "Invalid credentials."
-    """
     permission_classes = [AllowAny]
     
     def post(self, request):
-        email = request.data.get('email')
-        password = request.data.get('password')
-        
-        user = authenticate(email=email, password=password)
-        
-        if user is None:
-            return Response(
-                {'error': 'Invalid credentials.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        
-        if not user.is_active:
-            return Response(
-                {'error': 'Account not verified. Please verify your email.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        
         try:
+            email = request.data.get('email')
+            password = request.data.get('password')
+            
+            user = authenticate(email=email, password=password)
+            
+            # --- Handle Expected Failures ---
+            if user is None:
+                return Response(
+                    {'error': 'Invalid credentials.'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            
+            if not user.is_active:
+                return Response(
+                    {'error': 'Account not verified. Please verify your email.'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            
+            # --- If Successful ---
             refresh = MyTokenObtainPairSerializer.get_token(user)
-            return Response({
+            response = Response({
                 'access': str(refresh.access_token),
-                'refresh': str(refresh),
                 'user': UserSerializer(user).data
             }, status=status.HTTP_200_OK)
+
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
+                value=str(refresh),
+                httponly=True,
+                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+            )
+            
+            return response
+
+        # --- Handle Unexpected System Errors ---
         except Exception as e:
+            # Log the full error for debugging
+            logger.error(f"An unexpected error occurred during login: {e}")
+            
+            # Return a generic server error to the user
             return Response(
-                {'error': f'Token generation failed: {str(e)}'},
+                {'error': 'A server error occurred. Please try again later.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+
+
+
+
+
+class RefreshTokenView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
+        if not refresh_token:
+            return Response({'error': 'Refresh token not found.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        try:
+            # We don't need to validate the token here as SimpleJWT's RefreshToken will do it
+            token = RefreshToken(refresh_token)
+            
+            # The token is valid, get a new access token
+            new_access_token = str(token.access_token)
+            
+            return Response({'access': new_access_token}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': 'Invalid or expired refresh token.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 class UserProfileView(APIView):
     serializer_class = UserSerializer 
@@ -253,3 +264,14 @@ class AdminDashboardView(APIView):
         users = User.objects.all()
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+
+class LogoutView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        response = Response({"message": "Logout successful."}, status=status.HTTP_200_OK)
+        # Clear the refresh token cookie
+        response.delete_cookie(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
+        return response

@@ -90,13 +90,13 @@ const SignUp = () => {
           {/* The JSX for the form inputs is exactly the same as you provided */}
 
           <div className="space-y-4 rounded-md">
-                       {" "}
+                 {" "}
             <div>
-                           {" "}
+                    {" "}
               <label htmlFor="fullName" className="sr-only">
-                                Full Name              {" "}
+                        Full Name       {" "}
               </label>
-                           {" "}
+                    {" "}
               <input
                 id="fullName"
                 name="fullName"
@@ -108,15 +108,15 @@ const SignUp = () => {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
               />
-                         {" "}
+                   {" "}
             </div>
-                       {" "}
+                 {" "}
             <div>
-                           {" "}
+                    {" "}
               <label htmlFor="email" className="sr-only">
-                                Email Address              {" "}
+                        Email Address       {" "}
               </label>
-                           {" "}
+                    {" "}
               <input
                 id="email"
                 name="email"
@@ -128,15 +128,15 @@ const SignUp = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
-                         {" "}
+                   {" "}
             </div>
-                       {" "}
+                 {" "}
             <div>
-                           {" "}
+                    {" "}
               <label htmlFor="password" className="sr-only">
-                                Password              {" "}
+                        Password       {" "}
               </label>
-                           {" "}
+                    {" "}
               <input
                 id="password"
                 name="password"
@@ -148,15 +148,15 @@ const SignUp = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-                         {" "}
+                   {" "}
             </div>
-                       {" "}
+                 {" "}
             <div>
-                           {" "}
+                    {" "}
               <label htmlFor="confirm-password" className="sr-only">
-                                Confirm Password              {" "}
+                        Confirm Password       {" "}
               </label>
-                           {" "}
+                    {" "}
               <input
                 id="confirm-password"
                 name="confirm-password"
@@ -168,9 +168,9 @@ const SignUp = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
-                         {" "}
+                   {" "}
             </div>
-                     {" "}
+                {" "}
           </div>
 
           <div>

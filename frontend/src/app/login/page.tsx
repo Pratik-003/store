@@ -1,7 +1,8 @@
-"use client";
+'use client';
 
 import { useState } from "react";
-import { useRouter } from "next/navigation"; // 1. Import useRouter
+import { useRouter } from "next/navigation";
+import { useAuth } from '../context/AuthContext';
 
 const ErrorMessage = ({ message }: { message: string }) => (
   <div
@@ -17,7 +18,9 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter(); // 2. Initialize the router
+  
+  // Use the useAuth hook to get the loginUser function.
+  const { loginUser } = useAuth();
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -25,30 +28,9 @@ const Login = () => {
     setError("");
 
     try {
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-      const response = await fetch(`${apiBaseUrl}api/auth/login/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Use a more specific error message from the API if available
-        const errorMessage = data.detail || data.message || "Invalid credentials. Please try again.";
-        throw new Error(errorMessage);
-      }
-
-      // 3. Add redirection logic
-      // After successful login, redirect based on is_admin flag
-      if (data.user && data.user.is_admin) {
-        router.push("/admin"); // Redirect to admin dashboard
-      } else {
-        router.push("/"); // Redirect to user homepage
-      }
-
+      // Instead of a direct fetch call, we now use the loginUser function from the context.
+      // This function already handles the API call, token storage, and redirection.
+      await loginUser(email, password);
     } catch (err: any) {
       setError(err.message);
     } finally {

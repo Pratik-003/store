@@ -7,6 +7,7 @@ from .serializers import ProductSerializer, CategorySerializer
 from django.shortcuts import get_object_or_404
 
 class ProductListView(APIView):
+    serializer_class = ProductSerializer
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
@@ -28,6 +29,7 @@ class ProductListView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ProductDetailView(APIView):
+    serializer_class = ProductSerializer
     permission_classes = [IsAuthenticated]
     
     def get_object(self, pk):
@@ -64,6 +66,7 @@ class ProductDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class CategoryListView(APIView):
+    serializer_class = CategorySerializer
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
@@ -85,6 +88,7 @@ class CategoryListView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CategoryDetailView(APIView):
+    serializer_class = CategorySerializer
     permission_classes = [IsAuthenticated]
     
     def get_object(self, pk):
