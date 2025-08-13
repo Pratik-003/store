@@ -1,31 +1,3 @@
-# Move the YAML schema to the very top (before any imports)
-"""
-components:
-  schemas:
-    User:
-      type: object
-      properties:
-        userid:
-          type: string
-        username:
-          type: string
-        email:
-          type: string
-          format: email
-        is_admin:
-          type: boolean
-        created_at:
-          type: string
-          format: date-time
-      example:
-        userid: "ABC123"
-        username: "john_doe"
-        email: "john@example.com"
-        is_admin: false
-        created_at: "2024-01-01T00:00:00Z"
-"""
-
-
 from rest_framework import serializers
 from .models import User, OTP
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer

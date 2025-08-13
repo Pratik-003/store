@@ -37,7 +37,6 @@ class RegisterView(APIView):
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save(is_active=False)
             user = serializer.save()
             
             # Create OTP for the user
