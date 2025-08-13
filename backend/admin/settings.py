@@ -175,7 +175,8 @@ SPECTACULAR_SETTINGS = {
 }
 
 
-
+CSRF_COOKIE_HTTPONLY = False  # Allows JavaScript to read CSRF token
+CSRF_USE_SESSIONS = False
 
 
 
