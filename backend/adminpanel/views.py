@@ -31,56 +31,13 @@ class MyTokenObtainPairView(TokenObtainPairView):
     
     
 class RegisterView(APIView):
-    serializer_class = RegisterSerializer 
-    """
-    Register a new user.
-    
-    ---
-    # Swagger documentation
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              username:
-                type: string
-                example: "john_doe"
-              email:
-                type: string
-                format: email
-                example: "user@example.com"
-              password:
-                type: string
-                format: password
-                example: "securepassword123"
-            required:
-              - username
-              - email
-              - password
-    
-    responses:
-      201:
-        description: User created
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                user:
-                  $ref: '#/components/schemas/User'
-      400:
-        description: Invalid input
-  """
-    
+    serializer_class = RegisterSerializer  
     permission_classes = [AllowAny]
     
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
+            user = serializer.save(is_active=False)
             user = serializer.save()
             
             # Create OTP for the user

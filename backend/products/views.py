@@ -77,7 +77,11 @@ class CategoryListView(APIView):
     def post(self, request):
         if not request.user.is_admin:
             return Response(
-                {'error': 'You are not authorized to perform this action.'},
+                {
+                    'error': 'Admin privileges required',
+                    'required': 'is_admin=True',
+                    'your_role': 'regular_user' 
+                },
                 status=status.HTTP_403_FORBIDDEN
             )
         
