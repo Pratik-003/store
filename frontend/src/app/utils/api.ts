@@ -51,7 +51,7 @@ api.interceptors.response.use(
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
     
     // Check for a 401 error and if it's not the refresh token request itself.
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+    if ((error.response?.status === 401 || error.response?.status === 403) && originalRequest && !originalRequest._retry) {
       
       // If we're already refreshing, add the request to the queue.
       if (isRefreshing) {

@@ -122,21 +122,21 @@ REST_FRAMEWORK = {
 
 # JWT settings
 SIMPLE_JWT = {
-    'USER_ID_FIELD': 'userid',  # Tell JWT to use your custom field
+    'USER_ID_FIELD': 'id',  # Tell JWT to use your custom field
     'USER_ID_CLAIM': 'user_id',
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=10),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': True,
     # Custom settings for cookie names
-    'AUTH_COOKIE': 'access_token',  # Could be used for access token if you wanted
-    'AUTH_COOKIE_REFRESH': 'refresh_token', # Name for the refresh token cookie
+    'AUTH_COOKIE': 'access',  # Could be used for access token if you wanted
+    'AUTH_COOKIE_REFRESH': 'refresh', # Name for the refresh token cookie
     'AUTH_COOKIE_DOMAIN': None,
-    'AUTH_COOKIE_SECURE': not DEBUG, # Will be False in development, True in production # Should be True in production (HTTPS)
+    'AUTH_COOKIE_SECURE': True, # Will be False in development, True in production # Should be True in production (HTTPS)
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_PATH': '/',
-    'AUTH_COOKIE_SAMESITE': 'Lax', # Or 'Strict'
+    'AUTH_COOKIE_SAMESITE': 'None', # Or 'Strict'
 }
 
 # CORS settings
@@ -175,5 +175,13 @@ SPECTACULAR_SETTINGS = {
 }
 
 
-CSRF_COOKIE_HTTPONLY = False  # Allows JavaScript to read CSRF token
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    # Add production domains when needed
+]
+
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
+
+# Disable these if not using session auth
+CSRF_COOKIE_HTTPONLY = False  
 CSRF_USE_SESSIONS = False
