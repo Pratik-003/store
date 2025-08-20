@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'corsheaders',
     
     # Local apps
+    'core',
     'adminpanel',
     'products',
 ]
@@ -118,6 +119,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'EXCEPTION_HANDLER': 'core.utils.custom_exception_handler.custom_exception_handler',
 }
 
 # JWT settings
@@ -185,3 +187,6 @@ CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 # Disable these if not using session auth
 CSRF_COOKIE_HTTPONLY = False  
 CSRF_USE_SESSIONS = False
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

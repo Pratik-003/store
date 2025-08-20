@@ -181,7 +181,6 @@ class RefreshTokenView(APIView):
             refresh_token = (request.COOKIES.get('refresh') or request.COOKIES.get('refresh_token'))
         
             if not refresh_token:
-                print("Available cookies:", request.COOKIES)  # Debug
                 return Response({'error': 'Refresh token missing'}, status=401)
 
             # 2. Verify and decode the refresh token
@@ -189,7 +188,6 @@ class RefreshTokenView(APIView):
             user_id = refresh.payload.get('user_id')
             
             if not user_id:
-                print("Invalid token payload, user_id not found")
                 return Response({'error': 'Invalid token payload'}, status=401)
 
             # 3. Get user from database
@@ -198,8 +196,6 @@ class RefreshTokenView(APIView):
             # 4. Generate new tokens
             new_refresh = RefreshToken.for_user(user)
             new_access = str(new_refresh.access_token)
-            print(f"{new_access} new access token")
-            print(f"{new_refresh} new refresh token  ")
             
             # 5. Prepare response with all tokens
             response = Response({
@@ -221,10 +217,8 @@ class RefreshTokenView(APIView):
             return response
 
         except (TokenError, User.DoesNotExist) as e:
-            print("exception occurred:", str(e))
             return Response({'error': 'Invalid refresh token'}, status=401)
         except Exception as e:
-            print("An unexpected error occurred   2222:", str(e))
             logger.error(f"Refresh token error: {str(e)}")
             return Response({'error': 'Token refresh failed'}, status=500)
 
