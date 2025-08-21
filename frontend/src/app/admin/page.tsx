@@ -21,6 +21,7 @@ import {
 
 import AddCategoryForm from '@/components/AddCategoryForm';
 import AddProductForm from '@/components/AddProductForm';
+import ProductsViewModify from '@/components/ProductsView';
 // =================================================================
 //  Reusable Components (StatCard, Header) - NO CHANGES NEEDED
 // =================================================================
@@ -112,10 +113,10 @@ export default function AdminPage() {
         return <DashboardView />;
       case 'addProduct':
         return <AddProductForm />;
-      case 'addCategory': // <-- ADD THIS CASE
+      case 'addCategory':
         return <AddCategoryForm />;
       case 'products':
-        return <ProductsView />;
+        return <ProductsViewModify/>
       case 'settings':
         return <SettingsView />;
       default:
