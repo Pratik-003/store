@@ -42,6 +42,7 @@ class ProductDetailView(APIView):
     
     def put(self, request, pk):
         if not request.user.is_admin:
+            print("User is not admin, cannot update product.")
             return Response(
                 {'error': 'You are not authorized to perform this action.'},
                 status=status.HTTP_403_FORBIDDEN

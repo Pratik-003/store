@@ -20,7 +20,7 @@ import logging
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import MyTokenObtainPairSerializer
-
+from rest_framework_simplejwt.exceptions import TokenError
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,6 @@ class RegisterView(APIView):
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save(is_active=False)
             user = serializer.save()
             
             # Create OTP for the user
@@ -144,7 +143,8 @@ class LoginView(APIView):
                 value=str(refresh),
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
+                max_age=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds(),
             )
             
             return response
@@ -166,27 +166,61 @@ class LoginView(APIView):
 
 
 
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+
+@method_decorator(csrf_exempt, name='dispatch')
 class RefreshTokenView(APIView):
     permission_classes = [AllowAny]
-
+    
     def post(self, request):
-        refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
-        if not refresh_token:
-            return Response({'error': 'Refresh token not found.'}, status=status.HTTP_401_UNAUTHORIZED)
-        
         try:
-            # We don't need to validate the token here as SimpleJWT's RefreshToken will do it
-            token = RefreshToken(refresh_token)
+            # 1. Get refresh token from cookie
+            refresh_token = (request.COOKIES.get('refresh') or request.COOKIES.get('refresh_token'))
+        
+            if not refresh_token:
+                return Response({'error': 'Refresh token missing'}, status=401)
+
+            # 2. Verify and decode the refresh token
+            refresh = RefreshToken(refresh_token, verify=True)
+            user_id = refresh.payload.get('user_id')
             
-            # The token is valid, get a new access token
-            new_access_token = str(token.access_token)
+            if not user_id:
+                return Response({'error': 'Invalid token payload'}, status=401)
+
+            # 3. Get user from database
+            user = User.objects.get(id=user_id)
             
-            return Response({'access': new_access_token}, status=status.HTTP_200_OK)
+            # 4. Generate new tokens
+            new_refresh = RefreshToken.for_user(user)
+            new_access = str(new_refresh.access_token)
+            
+            # 5. Prepare response with all tokens
+            response = Response({
+                'access': new_access,
+                'refresh': str(new_refresh),
+                'user': UserSerializer(user).data
+            }, status=200)
+
+            # 6. Set cookies (matching your LoginView settings)
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
+                value=str(new_refresh),
+                httponly=True,
+                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
+                max_age=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds(),
+            )          
+            
+            return response
+
+        except (TokenError, User.DoesNotExist) as e:
+            return Response({'error': 'Invalid refresh token'}, status=401)
         except Exception as e:
-            return Response({'error': 'Invalid or expired refresh token.'}, status=status.HTTP_401_UNAUTHORIZED)
-
-
-
+            logger.error(f"Refresh token error: {str(e)}")
+            return Response({'error': 'Token refresh failed'}, status=500)
 
 
 

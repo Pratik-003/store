@@ -7,3 +7,4 @@ djangorestframework-simplejwt
 pyotp
 drf-yasg 
 drf-spectacular
+Pillow
