@@ -7,20 +7,20 @@ from django.contrib.auth import authenticate
 from django.core.mail import send_mail
 from django.conf import settings
 from .models import User, OTP
-from .serializers import (
-    UserSerializer, 
-    RegisterSerializer, 
-    MyTokenObtainPairSerializer,
-    OTPSerializer
-)
-import pyotp
-import random
-import string
+from .serializers import (UserSerializer, RegisterSerializer, MyTokenObtainPairSerializer, OTPSerializer)
 import logging
 
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import MyTokenObtainPairSerializer
+
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from core.views import generate_tokens_for_user
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
+from rest_framework_simplejwt.utils import aware_utcnow
+
 
 logger = logging.getLogger(__name__)
 
@@ -130,17 +130,16 @@ class LoginView(APIView):
                     {'error': 'Account not verified. Please verify your email.'},
                     status=status.HTTP_401_UNAUTHORIZED
                 )
+            tokens = generate_tokens_for_user(user)
             
-            # --- If Successful ---
-            refresh = MyTokenObtainPairSerializer.get_token(user)
             response = Response({
-                'access': str(refresh.access_token),
-                'user': UserSerializer(user).data
+                'access': tokens['access'],
+                'user': tokens['user']
             }, status=status.HTTP_200_OK)
 
             response.set_cookie(
                 key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
-                value=str(refresh),
+                value=tokens['refresh'],
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
                 samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
@@ -149,7 +148,6 @@ class LoginView(APIView):
             
             return response
 
-        # --- Handle Unexpected System Errors ---
         except Exception as e:
             # Log the full error for debugging
             logger.error(f"An unexpected error occurred during login: {e}")
@@ -161,15 +159,6 @@ class LoginView(APIView):
             )
 
 
-
-
-
-
-
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.exceptions import TokenError
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 
 @method_decorator(csrf_exempt, name='dispatch')
 class RefreshTokenView(APIView):
@@ -185,6 +174,15 @@ class RefreshTokenView(APIView):
 
             # 2. Verify and decode the refresh token
             refresh = RefreshToken(refresh_token, verify=True)
+            
+            # Verify token type is refresh
+            if refresh.payload.get('token_type') != 'refresh':
+                return Response({'error': 'Invalid token type'}, status=401)
+            
+            # Check if token is already blacklisted
+            if BlacklistedToken.objects.filter(token__jti=refresh['jti']).exists():
+                return Response({'error': 'Token has been revoked'}, status=401)
+
             user_id = refresh.payload.get('user_id')
             
             if not user_id:
@@ -194,20 +192,25 @@ class RefreshTokenView(APIView):
             user = User.objects.get(id=user_id)
             
             # 4. Generate new tokens
-            new_refresh = RefreshToken.for_user(user)
-            new_access = str(new_refresh.access_token)
+            tokens = generate_tokens_for_user(user)
             
-            # 5. Prepare response with all tokens
+            # 5. BLACKLIST the old refresh token
+            try:
+                refresh.blacklist()
+            except Exception as e:
+                logger.warning(f"Could not blacklist token: {e}")
+
+            # 6. Prepare response
             response = Response({
-                'access': new_access,
-                'refresh': str(new_refresh),
-                'user': UserSerializer(user).data
+                'access': tokens['access'],
+                'refresh': tokens['refresh'],
+                'user': tokens['user']
             }, status=200)
 
-            # 6. Set cookies (matching your LoginView settings)
+            # 7. Set cookie
             response.set_cookie(
                 key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
-                value=str(new_refresh),
+                value=tokens['refresh'],
                 httponly=True,
                 secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
                 samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
@@ -259,9 +262,17 @@ class AdminDashboardView(APIView):
 
 
 class LogoutView(APIView):
-    permission_classes = [AllowAny]
-
+    permission_classes = [IsAuthenticated]  # Changed from AllowAny
     def post(self, request):
+        try:
+            # Get refresh token from cookie and blacklist it
+            refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
+            if refresh_token:
+                refresh = RefreshToken(refresh_token)
+                refresh.blacklist()
+        except (TokenError, Exception) as e:
+            logger.warning(f"Logout token blacklist issue: {e}")
+        
         response = Response({"message": "Logout successful."}, status=status.HTTP_200_OK)
         # Clear the refresh token cookie
         response.delete_cookie(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
