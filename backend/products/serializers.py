@@ -7,16 +7,18 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'created_at']
 
 class ProductSerializer(serializers.ModelSerializer):
-    category = CategorySerializer(read_only=True)
-    category_id = serializers.PrimaryKeyRelatedField(
-        queryset=Category.objects.all(),
-        source='category',
-        write_only=True
-    )
+    # category = CategorySerializer(read_only=True)
+    # category_id = serializers.PrimaryKeyRelatedField(
+    #     queryset=Category.objects.all(),
+    #     source='category',
+    #     write_only=True
+    # )
+    categories = CategorySerializer(many=True, read_only=True)
+    category_ids = serializers.PrimaryKeyRelatedField(many=True, queryset=Category.objects.all(), source='categories', write_only=True)
     
     image = serializers.ImageField(required=False, allow_null=True)
     
     class Meta:
         model = Product
         fields = ['id', 'name', 'description', 'price', 'stock_quantity', 
-                 'category', 'category_id', 'image_url', 'image', 'created_at']
+                 'categories', 'category_ids', 'image_url', 'image', 'created_at']
