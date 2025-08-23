@@ -38,9 +38,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const accessToken = localStorage.getItem('accessToken');
       if (accessToken) {
         try {
-          // Use the 'api' utility for the request
-          const { data } = await api.get('/api/user/');
-          setUser(data as User); // Assert the type of the user data
+          const { data } = await api.get('/api/user/', {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          setUser(data as User); 
         } catch (error) {
           console.error("Failed to fetch user profile, clearing access token.", error);
           localStorage.removeItem('accessToken');

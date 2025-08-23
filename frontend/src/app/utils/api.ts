@@ -1,10 +1,7 @@
-// /app/utils/api.ts
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 
-// Set the base URL for the API.
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
-  // This is crucial for sending and receiving cookies with requests.
   withCredentials: true,
 });
 
