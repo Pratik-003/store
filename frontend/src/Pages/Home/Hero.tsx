@@ -58,7 +58,7 @@ const Hero: React.FC<HeroProps> = () => {
 
         {/* Video Overlay */}
         <div className="absolute z-10 w-full h-full bg-black opacity-50"></div>
-
+{/* 
         <header className="absolute top-0 right-0 z-30 p-4 md:p-6">
         <Link href="/login">
             <motion.div
@@ -69,7 +69,7 @@ const Hero: React.FC<HeroProps> = () => {
               Login
             </motion.div>
           </Link>
-        </header>
+        </header> */}
 
         <motion.div
           className="relative z-20 text-center text-white px-6 sm:px-12"

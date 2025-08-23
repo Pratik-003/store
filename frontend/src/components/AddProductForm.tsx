@@ -37,20 +37,22 @@ function AddProductForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<Status>({ message: "", type: "" });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const didFetch = useRef(false);
 
   useEffect(() => {
+    if (didFetch.current) return;
+    didFetch.current = true;
+  
     const fetchCategories = async () => {
       try {
         const response = await api.get<Category[]>("/api/products/categories/");
         setCategories(response.data);
       } catch (error) {
         console.error("Failed to fetch categories:", error);
-        setStatus({
-          message: "Could not load product categories.",
-          type: "error",
-        });
+        setStatus({ message: "Could not load product categories.", type: "error" });
       }
     };
+  
     fetchCategories();
   }, []);
 
