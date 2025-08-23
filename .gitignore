@@ -1,38 +1,88 @@
-backend/.env
-backend/venv
-# Django
+# ==================== #
+#  PYTHON & DJANGO     #
+# ==================== #
+# Byte-compiled files
 *.pyc
-*__pycache__/
-*.sqlite3
 *.pyo
 *.pyd
-*.log
-local_settings.py
-db.sqlite3
-media/
-staticfiles/
-.DS_Store
+__pycache__/
+*.py,cover
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+venv.bak/
+.venv.bak/
+
+# Environment variables
 .env
 .env.local
-.venv
-venv/
-env/
+.env.development
+.env.production
+.env.*
 
-# Backup files
-*.bak
-*.swp
-*~
+# Django specific
+db.sqlite3
+*.sqlite3
+*.sqlite
+local_settings.py
+media/
+staticfiles/
 
-# IDE specific
+# Logs
+*.log
+logs/
+
+# Testing and coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.tox/
+
+# Package files
+*.egg
+*.egg-info/
+.installed.cfg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ==================== #
+#       IDE            #
+# ==================== #
+# VS Code
 .vscode/
+*.code-workspace
+
+# PyCharm/IntelliJ
 .idea/
+*.iml
+*.ipr
+*.iws
+
+# General IDE
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*~
 
-# Frontend (general)
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ==================== #
+#      FRONTEND        #
+# ==================== #
 node_modules/
 dist/
 build/
@@ -41,84 +91,17 @@ build/
 *.css.map
 *.js.map
 
-# Logs
-logs/
+# Frontend package managers
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+package-lock.json
+yarn.lock
 
-# Coverage
-coverage/
-
-# Virtual environment
-venv/
-ENV/
-
-# Database migrations (optional)
-*/migrations/*.py
-!*/migrations/__init__.py
-
-# Python
-*.py[cod]
-__pycache__/
-*.so
-.Python
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
-.coverage
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFESTvenv/
-__pycache__/
-*.pyc
-.env
-
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-*.py,cover
-.pytest_cache/
-.mypy_cache/
-
-# Virtual Environment
-venv/
-.venv/
-env/
-ENV/
-venv.bak/
-.venv.bak/
-
-# Django
-*.log
-*.pot
-*.sqlite3
-*.sqlite
-db.sqlite3
-media/
-staticfiles/
-
-# Environment variables
-.env
-.env.local
-.env.development
-.env.production
-
-# IDE
-.vscode/
-.idea/
+# ==================== #
+#     BACKUP FILES     #
+# ==================== #
+*.bak
 *.swp
 *.swo
 *~
-.DS_Store
-
-# Frontend (if applicable)
-node_modules/
-dist/
-build/
-.sass-cache/
-.cache/
-
