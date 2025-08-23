@@ -18,14 +18,26 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_admin', True)
         extra_fields.setdefault('is_active', True)
-
-        if extra_fields.get('is_staff') is not True:
+        
+        # Get or generate username
+        username = extra_fields.get('username')
+        if not username:
+            email_prefix = email.split('@')[0]
+            username = f"{email_prefix}_admin"
+        
+        # Create a copy of extra_fields without username to avoid duplication
+        create_kwargs = extra_fields.copy()
+        if 'username' in create_kwargs:
+            del create_kwargs['username']
+        
+        if create_kwargs.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
+        if create_kwargs.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
-        if not extra_fields.get('is_active'):
+        if create_kwargs.get('is_active') is not True:
             raise ValueError('Superuser must have is_active=True.')
-        return self.create_user(extra_fields.get('username'), email, password, **extra_fields)
+        
+        return self.create_user(username, email, password, **create_kwargs)
 
 class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=100)

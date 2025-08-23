@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     
     # Local apps
@@ -138,7 +139,9 @@ SIMPLE_JWT = {
     'AUTH_COOKIE_SECURE': True, # Will be False in development, True in production # Should be True in production (HTTPS)
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_PATH': '/',
-    'AUTH_COOKIE_SAMESITE': 'None', # Or 'Strict'
+    'AUTH_COOKIE_SAMESITE': 'Lax', # Or 'Strict'
+    'ALGORITHM': 'HS256',  # Keep using HS256
+    'SIGNING_KEY': SECRET_KEY,  # You're already using your secret key
 }
 
 # CORS settings

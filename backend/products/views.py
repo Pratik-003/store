@@ -1,19 +1,29 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Product, Category
 from .serializers import ProductSerializer, CategorySerializer
+from .pagination import CustomPagination
 from django.shortcuts import get_object_or_404
 
 class ProductListView(APIView):
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination  # Pagination only for products
+    
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAuthenticated()]
     
     def get(self, request):
-        products = Product.objects.all()
-        serializer = ProductSerializer(products, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        products = Product.objects.all().order_by('created_at')
+        
+        paginator = self.pagination_class()
+        result_page = paginator.paginate_queryset(products, request)
+        serializer = ProductSerializer(result_page, many=True)
+        
+        return paginator.get_paginated_response(serializer.data)
     
     def post(self, request):
         if not request.user.is_admin:
@@ -30,7 +40,11 @@ class ProductListView(APIView):
 
 class ProductDetailView(APIView):
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAuthenticated()]
     
     def get_object(self, pk):
         return get_object_or_404(Product, pk=pk)
@@ -42,7 +56,6 @@ class ProductDetailView(APIView):
     
     def put(self, request, pk):
         if not request.user.is_admin:
-            print("User is not admin, cannot update product.")
             return Response(
                 {'error': 'You are not authorized to perform this action.'},
                 status=status.HTTP_403_FORBIDDEN
@@ -68,21 +81,21 @@ class ProductDetailView(APIView):
 
 class CategoryListView(APIView):
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAuthenticated()]
     
     def get(self, request):
-        categories = Category.objects.all()
+        categories = Category.objects.all()  # No pagination for categories
         serializer = CategorySerializer(categories, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     def post(self, request):
         if not request.user.is_admin:
             return Response(
-                {
-                    'error': 'Admin privileges required',
-                    'required': 'is_admin=True',
-                    'your_role': 'regular_user' 
-                },
+                {'error': 'Admin privileges required'},
                 status=status.HTTP_403_FORBIDDEN
             )
         
@@ -94,7 +107,11 @@ class CategoryListView(APIView):
 
 class CategoryDetailView(APIView):
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAuthenticated()]
     
     def get_object(self, pk):
         return get_object_or_404(Category, pk=pk)
