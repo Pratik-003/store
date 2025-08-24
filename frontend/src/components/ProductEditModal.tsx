@@ -5,8 +5,7 @@ import api from "@/app/utils/api";
 import { X, UploadCloud } from "lucide-react";
 import Image from "next/image";
 
-// It's recommended to move these interfaces to a shared types file (e.g., /types/index.ts)
-// and import them here to avoid inconsistencies across your app.
+
 interface Category {
   id: number;
   name: string;
@@ -18,7 +17,7 @@ interface Product {
   description: string;
   price: number;
   stock_quantity: number;
-  categories: Category[]; // Correctly defined as an array
+  categories: Category[]; 
   image_url: string | null;
   image?: string | null;
 }
@@ -86,7 +85,6 @@ const ProductEditModal = ({
         description: product.description,
         price: String(product.price),
         stock_quantity: String(product.stock_quantity),
-        // --- MODIFIED: Safely get the ID from the first category in the array ---
         category_id: String(product.categories?.[0]?.id || ""),
       });
       setCurrentImageUrl(resolveImageUrl(product.image ?? product.image_url));
@@ -111,7 +109,6 @@ const ProductEditModal = ({
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setImageFile(file);
-      // Create a temporary URL to preview the newly selected image
       setCurrentImageUrl(URL.createObjectURL(file));
     }
   };
@@ -129,7 +126,7 @@ const ProductEditModal = ({
     submissionData.append("price", formData.price);
     submissionData.append("stock_quantity", formData.stock_quantity);
     
-    // Your backend likely expects a single ID for the category relationship
+
     submissionData.append("category", formData.category_id);
 
     if (imageFile) {

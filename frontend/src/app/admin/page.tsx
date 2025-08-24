@@ -1,5 +1,3 @@
-// /app/admin/page.jsx
-
 'use client';
 
 import { useState } from 'react';
@@ -13,7 +11,7 @@ import {
   DollarSign,
   Users,
   ShoppingCart,
-  FolderPlus, // Import a new icon for categories
+  FolderPlus, 
 } from 'lucide-react';
 
 
@@ -22,22 +20,20 @@ import {
 import AddCategoryForm from '@/components/AddCategoryForm';
 import AddProductForm from '@/components/AddProductForm';
 import ProductsViewModify from '@/components/ProductsView';
-// =================================================================
-//  Reusable Components (StatCard, Header) - NO CHANGES NEEDED
-// =================================================================
+import CategoriesViewEdit from '@/components/CategoriesViewEdit';
+
 function StatCard({ icon, title, value, change }) { /* ... no changes ... */ }
 function Header({ toggleSidebar, pageTitle }) { /* ... no changes ... */ }
 
 
-// =================================================================
-//  Sidebar Component - MODIFIED
-// =================================================================
+
 function Sidebar({ isSidebarOpen, setActiveView, activeView }) {
   const menuItems = [
     { name: 'Dashboard', view: 'dashboard', icon: LayoutDashboard },
     { name: 'Add Product', view: 'addProduct', icon: PlusCircle },
-    { name: 'Add Category', view: 'addCategory', icon: FolderPlus }, // <-- ADD THIS
+    { name: 'Add Category', view: 'addCategory', icon: FolderPlus }, 
     { name: 'Products', view: 'products', icon: Package },
+    {name:'Categories', view: 'categories', icon: Package}, 
     { name: 'Settings', view: 'settings', icon: Settings },
   ];
 
@@ -48,7 +44,6 @@ function Sidebar({ isSidebarOpen, setActiveView, activeView }) {
       } sm:translate-x-0`}
       aria-label="Sidebar"
     >
-        {/* ... rest of the sidebar is unchanged ... */}
          <div className="h-full px-3 py-4 overflow-y-auto">
              <div className="p-4 mb-4">
                  <h1 className="text-2xl font-semibold whitespace-nowrap">AdminPanel</h1>
@@ -82,9 +77,7 @@ function Sidebar({ isSidebarOpen, setActiveView, activeView }) {
   );
 }
 
-// =================================================================
-//  View Components - NO CHANGES NEEDED
-// =================================================================
+
 function DashboardView() { /* ... no changes ... */ }
 function ProductsView() { /* ... no changes ... */ }
 function SettingsView() { /* ... no changes ... */ }
@@ -102,8 +95,9 @@ export default function AdminPage() {
   const viewTitles = {
     dashboard: 'Dashboard',
     addProduct: 'Add New Product',
-    addCategory: 'Add New Category', // <-- ADD THIS
+    addCategory: 'Add New Category', 
     products: 'Manage Products',
+    cachesories: 'Manage Categories',
     settings: 'Settings',
   };
 
@@ -117,6 +111,8 @@ export default function AdminPage() {
         return <AddCategoryForm />;
       case 'products':
         return <ProductsViewModify/>
+      case 'categories':
+        return <CategoriesViewEdit/>
       case 'settings':
         return <SettingsView />;
       default:
