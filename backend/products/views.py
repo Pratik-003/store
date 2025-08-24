@@ -151,6 +151,15 @@ class CategoryDetailView(APIView):
 
 class CategoryProductsView(APIView):
     permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAuthenticated()]
+    
+    def get(self, request, pk): 
+        category = get_object_or_404(Category, pk=pk)
+        products = category.products.all()
+        return Response([{"id": p.id, "name": p.name} for p in products])
     
     def put(self, request, pk):
         if not request.user.is_admin:
