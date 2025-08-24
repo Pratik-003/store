@@ -1,15 +1,17 @@
+// in /app/context/AuthContext.tsx
+
 'use client';
 
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '../utils/api';
 
-// 1. Define the type for the user object returned from the API
+
 interface User {
   id: number;
+  username: string; // <-- Added username
   email: string;
   is_admin: boolean;
-  // Add any other user properties here
 }
 
 // 2. Define the shape of the context's value
@@ -38,7 +40,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (accessToken) {
         try {
           // Use the 'api' utility for the request
-          const { data } = await api.get('/api/user/');
+          const { data } = await api.get('/api/auth/profile');
           setUser(data as User); // Assert the type of the user data
         } catch (error) {
           console.error("Failed to fetch user profile, clearing access token.", error);
@@ -72,10 +74,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logoutUser = async () => {
-    localStorage.removeItem('accessToken');
-    setUser(null);
-    router.push('/login');
-    // It's a good practice to also call a server-side logout endpoint here.
+    try {
+      // Call the server-side logout endpoint
+      await api.post('/api/auth/logout/');
+    } catch (error) {
+      // Log error but proceed with client-side logout anyway
+      console.error("Server-side logout failed:", error);
+    } finally {
+      // Always perform client-side cleanup
+      localStorage.removeItem('accessToken');
+      setUser(null);
+      router.push('/login');
+    }
   };
 
   const contextData: AuthContextType = { user, loginUser, logoutUser };

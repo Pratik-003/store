@@ -11,11 +11,11 @@ import {
   DollarSign,
   Users,
   ShoppingCart,
-  FolderPlus, 
+  FolderPlus,
+  LogOut, // <-- Import LogOut icon
 } from 'lucide-react';
 
-
-
+import { useAuth } from '../context/AuthContext';
 
 import AddCategoryForm from '@/components/AddCategoryForm';
 import AddProductForm from '@/components/AddProductForm';
@@ -25,15 +25,18 @@ import CategoriesViewEdit from '@/components/CategoriesViewEdit';
 function StatCard({ icon, title, value, change }) { /* ... no changes ... */ }
 function Header({ toggleSidebar, pageTitle }) { /* ... no changes ... */ }
 
-
-
+// =================================================================
+//  Sidebar Component - MODIFIED
+// =================================================================
 function Sidebar({ isSidebarOpen, setActiveView, activeView }) {
+  const { user, logoutUser } = useAuth(); // <-- Use the auth context
+
   const menuItems = [
     { name: 'Dashboard', view: 'dashboard', icon: LayoutDashboard },
     { name: 'Add Product', view: 'addProduct', icon: PlusCircle },
-    { name: 'Add Category', view: 'addCategory', icon: FolderPlus }, 
+    { name: 'Add Category', view: 'addCategory', icon: FolderPlus },
     { name: 'Products', view: 'products', icon: Package },
-    {name:'Categories', view: 'categories', icon: Package}, 
+    { name: 'Categories', view: 'categories', icon: Package },
     { name: 'Settings', view: 'settings', icon: Settings },
   ];
 
@@ -44,47 +47,59 @@ function Sidebar({ isSidebarOpen, setActiveView, activeView }) {
       } sm:translate-x-0`}
       aria-label="Sidebar"
     >
-         <div className="h-full px-3 py-4 overflow-y-auto">
-             <div className="p-4 mb-4">
-                 <h1 className="text-2xl font-semibold whitespace-nowrap">AdminPanel</h1>
-             </div>
-             <ul className="space-y-2 font-medium">
-                 {menuItems.map((item) => (
-                     <li key={item.name}>
-                         <button
-                             onClick={() => setActiveView(item.view)}
-                             className={`flex items-center p-2 rounded-lg w-full text-left hover:bg-gray-700 group ${
-                                 activeView === item.view ? 'bg-gray-700' : ''
-                             }`}
-                         >
-                             <item.icon className="w-5 h-5 text-gray-400 transition duration-75 group-hover:text-white" />
-                             <span className="ms-3">{item.name}</span>
-                         </button>
-                     </li>
-                 ))}
-             </ul>
-             <div className="absolute bottom-0 w-full p-4 left-0">
-                 <div className="flex items-center p-2 rounded-lg bg-gray-700">
-                     <UserCircle className="w-8 h-8 text-gray-400" />
-                     <div className="ms-3">
-                         <p className="text-sm font-semibold">Admin User</p>
-                         <p className="text-xs text-gray-400">admin@example.com</p>
-                     </div>
-                 </div>
-             </div>
-         </div>
+      <div className="h-full px-3 py-4 overflow-y-auto flex flex-col">
+        <div>
+          <div className="p-4 mb-4">
+            <h1 className="text-2xl font-semibold whitespace-nowrap">AdminPanel</h1>
+          </div>
+          <ul className="space-y-2 font-medium">
+            {menuItems.map((item) => (
+              <li key={item.name}>
+                <button
+                  onClick={() => setActiveView(item.view)}
+                  className={`flex items-center p-2 rounded-lg w-full text-left hover:bg-gray-700 group ${
+                    activeView === item.view ? 'bg-gray-700' : ''
+                  }`}
+                >
+                  <item.icon className="w-5 h-5 text-gray-400 transition duration-75 group-hover:text-white" />
+                  <span className="ms-3">{item.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* User Info and Logout Button */}
+        <div className="mt-auto pt-4">
+          <div className="flex items-center p-2 rounded-lg bg-gray-900/50 mb-2">
+            <UserCircle className="w-8 h-8 text-gray-400 flex-shrink-0" />
+            <div className="ms-3 overflow-hidden">
+              <p className="text-sm font-semibold truncate">Admin</p>
+              <p className="text-xs text-gray-400 truncate">
+                {user ? user.email : "Loading..."}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={logoutUser}
+            className="flex items-center p-2 rounded-lg w-full text-left text-red-400 hover:bg-red-500 hover:text-white group transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="ms-3 font-semibold">Logout</span>
+          </button>
+        </div>
+      </div>
     </aside>
   );
 }
 
 
 function DashboardView() { /* ... no changes ... */ }
-function ProductsView() { /* ... no changes ... */ }
 function SettingsView() { /* ... no changes ... */ }
 
 
 // =================================================================
-//  Main Admin Page Component - MODIFIED
+//  Main Admin Page Component
 // =================================================================
 export default function AdminPage() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -95,9 +110,9 @@ export default function AdminPage() {
   const viewTitles = {
     dashboard: 'Dashboard',
     addProduct: 'Add New Product',
-    addCategory: 'Add New Category', 
+    addCategory: 'Add New Category',
     products: 'Manage Products',
-    cachesories: 'Manage Categories',
+    categories: 'Manage Categories', // Corrected typo from 'cachesories'
     settings: 'Settings',
   };
 
@@ -110,9 +125,9 @@ export default function AdminPage() {
       case 'addCategory':
         return <AddCategoryForm />;
       case 'products':
-        return <ProductsViewModify/>
+        return <ProductsViewModify />
       case 'categories':
-        return <CategoriesViewEdit/>
+        return <CategoriesViewEdit />
       case 'settings':
         return <SettingsView />;
       default:
@@ -122,18 +137,18 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Sidebar 
-        isSidebarOpen={isSidebarOpen} 
-        setActiveView={setActiveView} 
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
+        setActiveView={setActiveView}
         activeView={activeView}
       />
 
       <div className="sm:ml-64">
         {isSidebarOpen && (
-            <div 
-                className="fixed inset-0 bg-black opacity-50 z-30 sm:hidden"
-                onClick={toggleSidebar}
-            ></div>
+          <div
+            className="fixed inset-0 bg-black opacity-50 z-30 sm:hidden"
+            onClick={toggleSidebar}
+          ></div>
         )}
 
         <Header toggleSidebar={toggleSidebar} pageTitle={viewTitles[activeView]} />

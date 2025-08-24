@@ -1,3 +1,5 @@
+// in /components/Navbar.tsx
+
 'use client';
 
 import { useState } from 'react';
@@ -45,7 +47,10 @@ const Navbar = () => {
                     Admin
                   </Link>
                 )}
-                <span className="text-gray-700">Hello, {user.email}!</span>
+                {/* --- MODIFIED: Display username and link to profile --- */}
+                <Link href="/profile" className="text-gray-700 hover:text-brand-brown-dark transition-colors font-medium">
+                  Hello, {user.username}!
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="px-4 py-2 text-sm font-medium text-white bg-brand-brown rounded-lg hover:bg-brand-brown-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-brown transition-colors"
@@ -107,7 +112,10 @@ const Navbar = () => {
                   </Link>
                 )}
                 <div className="border-t border-gray-200 my-2"></div>
-                 <span className="text-gray-700 block px-3 py-2 text-base font-medium">Hello, {user.email}!</span>
+                {/* --- MODIFIED: Display username and link to profile --- */}
+                <Link href="/profile" className="text-gray-700 hover:bg-gray-50 hover:text-brand-brown-dark block px-3 py-2 rounded-md text-base font-medium">
+                  Hello, {user.username}!
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full text-left text-gray-600 hover:bg-gray-50 hover:text-brand-brown-dark block px-3 py-2 rounded-md text-base font-medium"

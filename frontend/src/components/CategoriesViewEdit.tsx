@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, FormEvent, useMemo } from "react";
 import api from "@/app/utils/api";
 import {
   Tag,
@@ -10,13 +10,36 @@ import {
   CheckCircle,
   X,
   PlusCircle,
+  ChevronLeft,
+  ChevronRight,
+  Search,
 } from "lucide-react";
 
 //=========== INTERFACES ===========//
 
+interface Product {
+  id: number;
+  name: string;
+}
+
 interface Category {
   id: number;
   name: string;
+  products?: Product[]; // products are optional in the main list view
+}
+
+interface CategoryDetail extends Category {
+  products: Product[]; // products are required in the detail view
+}
+
+// --- NEW: Interface for paginated API responses ---
+interface PaginatedResponse<T> {
+  count: number;
+  total_pages: number;
+  current_page: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
 }
 
 interface Status {
@@ -40,48 +63,112 @@ const CategoryModal = ({
   onSave,
 }: CategoryModalProps) => {
   const [name, setName] = useState("");
+  const [assignedProducts, setAssignedProducts] = useState<Product[]>([]);
+  const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
+  const [assignedSearch, setAssignedSearch] = useState("");
+  const [availableSearch, setAvailableSearch] = useState("");
+
   const [isLoading, setIsLoading] = useState(false);
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isEditing = category !== null;
 
   useEffect(() => {
-    if (isOpen) {
-      setName(category?.name || "");
-      setError(null); // Reset error when modal opens or category changes
-    }
-  }, [category, isOpen]);
+    if (!isOpen) return;
 
-  if (!isOpen) return null;
+    setError(null);
+    setAssignedSearch("");
+    setAvailableSearch("");
+
+    if (isEditing && category) {
+      setName(category.name);
+      setIsDetailsLoading(true);
+
+      const fetchCategoryDetails = async () => {
+        try {
+          // Fetch both category details and all products in parallel
+          const [catDetailsRes, allProductsRes] = await Promise.all([
+            api.get<CategoryDetail>(`/api/products/categories/${category.id}/`),
+            // --- MODIFIED: Expect a PaginatedResponse, not a direct array ---
+            api.get<PaginatedResponse<Product>>("/api/products/"),
+          ]);
+
+          const categoryDetails = catDetailsRes.data;
+          // --- MODIFIED: Extract products from the 'results' key ---
+          const allProducts = allProductsRes.data.results;
+
+          const assignedIds = new Set(
+            categoryDetails.products.map((p) => p.id)
+          );
+
+          setAssignedProducts(categoryDetails.products);
+          setAvailableProducts(
+            allProducts.filter((p) => !assignedIds.has(p.id))
+          );
+        } catch (err) {
+          console.error("Failed to fetch category details:", err);
+          setError("Could not load product assignment data.");
+        } finally {
+          setIsDetailsLoading(false);
+        }
+      };
+      fetchCategoryDetails();
+    } else {
+      // Reset for "Create" mode
+      setName("");
+      setAssignedProducts([]);
+      setAvailableProducts([]);
+    }
+  }, [category, isOpen, isEditing]);
+
+  const handleAddProduct = (productToAdd: Product) => {
+    setAvailableProducts((prev) => prev.filter((p) => p.id !== productToAdd.id));
+    setAssignedProducts((prev) => [...prev, productToAdd].sort((a,b) => a.name.localeCompare(b.name)));
+  };
+
+  const handleRemoveProduct = (productToRemove: Product) => {
+    setAssignedProducts((prev) => prev.filter((p) => p.id !== productToRemove.id));
+    setAvailableProducts((prev) => [...prev, productToRemove].sort((a,b) => a.name.localeCompare(b.name)));
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    const payload = { name };
-
     try {
-      let response;
-      if (isEditing) {
-        // PUT request to update existing category
-        response = await api.put<Category>(
+      if (isEditing && category) {
+        // --- UPDATE LOGIC ---
+        const nameUpdatePromise = api.put<Category>(
           `/api/products/categories/${category.id}/`,
-          payload
+          { name }
         );
+
+        const productUpdatePromise = api.put(
+          `/api/products/categories/${category.id}/products/`,
+          { product_ids: assignedProducts.map((p) => p.id) }
+        );
+
+        const [nameUpdateResponse] = await Promise.all([
+          nameUpdatePromise,
+          productUpdatePromise,
+        ]);
+        
+        onSave(nameUpdateResponse.data);
+
       } else {
-        // POST request to create a new category
-        response = await api.post<Category>(
-          "/api/products/categories/",
-          payload
-        );
+        // --- CREATE LOGIC ---
+        const response = await api.post<Category>("/api/products/categories/", {
+          name,
+        });
+        onSave(response.data);
       }
-      onSave(response.data);
       onClose();
     } catch (err: any) {
       console.error("Failed to save category:", err);
       const errorMessage =
-        err.response?.data?.name?.[0] || // Handle specific field errors from DRF
+        err.response?.data?.name?.[0] ||
         err.response?.data?.detail ||
         "An unexpected error occurred.";
       setError(`Failed to save: ${errorMessage}`);
@@ -90,71 +177,110 @@ const CategoryModal = ({
     }
   };
 
+  const filteredAvailable = useMemo(() =>
+    availableProducts.filter(p => p.name.toLowerCase().includes(availableSearch.toLowerCase())),
+    [availableProducts, availableSearch]
+  );
+  const filteredAssigned = useMemo(() =>
+    assignedProducts.filter(p => p.name.toLowerCase().includes(assignedSearch.toLowerCase())),
+    [assignedProducts, assignedSearch]
+  );
+
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md m-4">
-        <div className="p-6">
-          <div className="flex justify-between items-center pb-4 border-b">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl m-4 max-h-[90vh] flex flex-col">
+        <div className="p-6 border-b">
+          <div className="flex justify-between items-center">
             <h3 className="text-xl font-semibold text-gray-900">
-              {isEditing ? "Edit Category" : "Create New Category"}
+              {isEditing ? `Edit Category: ${category?.name}` : "Create New Category"}
             </h3>
-            <button
-              onClick={onClose}
-              className="p-1 rounded-full text-gray-400 hover:bg-gray-200"
-            >
+            <button onClick={onClose} className="p-1 rounded-full text-gray-400 hover:bg-gray-200">
               <X className="w-6 h-6" />
             </button>
           </div>
+        </div>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        {/* --- MODIFIED: Added id="category-form" --- */}
+        <form id="category-form" onSubmit={handleSubmit} className="flex-grow overflow-y-auto">
+          <div className="p-6 space-y-6">
             {error && (
               <div className="bg-red-100 text-red-800 p-3 rounded-lg text-sm border border-red-200">
                 {error}
               </div>
             )}
             <div>
-              <label
-                htmlFor="name"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                 Category Name
               </label>
-              <input
-                type="text"
-                name="name"
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                required
-              />
+              <input type="text" name="name" id="name" value={name} onChange={(e) => setName(e.target.value)}
+                className="block w-full max-w-sm px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required/>
             </div>
-            <div className="flex justify-end items-center pt-4 border-t mt-6">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium bg-white border rounded-md hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="ml-3 inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-indigo-400"
-              >
-                {isLoading
-                  ? "Saving..."
-                  : isEditing
-                  ? "Save Changes"
-                  : "Create Category"}
-              </button>
-            </div>
-          </form>
+
+            {isEditing && (
+              <div>
+                <h4 className="text-lg font-medium text-gray-800 mb-2">Manage Products</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative">
+                  {isDetailsLoading && (
+                    <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10 rounded-lg">
+                        <p className="text-indigo-600 font-semibold animate-pulse">Loading Products...</p>
+                    </div>
+                  )}
+                  {/* Available Products Column */}
+                  <div className="border rounded-lg p-3 flex flex-col">
+                      <div className="relative mb-2">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"/>
+                        <input type="text" placeholder="Search available..." value={availableSearch} onChange={e => setAvailableSearch(e.target.value)} className="w-full pl-8 pr-2 py-1.5 border rounded-md text-sm"/>
+                      </div>
+                      <h5 className="font-semibold mb-2 text-center text-gray-700">Available Products</h5>
+                      <div className="overflow-y-auto h-64 bg-gray-50 rounded p-1 space-y-1">
+                        {filteredAvailable.map(p => (
+                          <div key={p.id} className="flex items-center justify-between p-2 bg-white rounded shadow-sm">
+                            <span className="text-sm">{p.name}</span>
+                            <button type="button" onClick={() => handleAddProduct(p)} className="p-1 text-green-600 hover:bg-green-100 rounded-full"><ChevronRight className="w-5 h-5"/></button>
+                          </div>
+                        ))}
+                      </div>
+                  </div>
+
+                  {/* Assigned Products Column */}
+                  <div className="border rounded-lg p-3 flex flex-col">
+                      <div className="relative mb-2">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"/>
+                        <input type="text" placeholder="Search in category..." value={assignedSearch} onChange={e => setAssignedSearch(e.target.value)} className="w-full pl-8 pr-2 py-1.5 border rounded-md text-sm"/>
+                      </div>
+                      <h5 className="font-semibold mb-2 text-center text-gray-700">Products in this Category</h5>
+                      <div className="overflow-y-auto h-64 bg-gray-50 rounded p-1 space-y-1">
+                        {filteredAssigned.map(p => (
+                          <div key={p.id} className="flex items-center justify-between p-2 bg-white rounded shadow-sm">
+                            <button type="button" onClick={() => handleRemoveProduct(p)} className="p-1 text-red-600 hover:bg-red-100 rounded-full"><ChevronLeft className="w-5 h-5"/></button>
+                            <span className="text-sm">{p.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </form>
+
+        <div className="flex justify-end items-center p-6 border-t bg-gray-50 rounded-b-lg">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium bg-white border rounded-md hover:bg-gray-50">
+            Cancel
+          </button>
+           {/* --- MODIFIED: Removed onClick, rely on form's onSubmit --- */}
+          <button type="submit" form="category-form" disabled={isLoading || isDetailsLoading} className="ml-3 inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed">
+            {isLoading ? "Saving..." : "Save Changes"}
+          </button>
         </div>
       </div>
     </div>
   );
 };
+
 
 //=========== MAIN VIEW COMPONENT ===========//
 
@@ -226,7 +352,7 @@ const CategoriesViewEdit = () => {
     const isUpdating = categories.some((c) => c.id === savedCategory.id);
     if (isUpdating) {
       setCategories((prev) =>
-        prev.map((c) => (c.id === savedCategory.id ? savedCategory : c))
+        prev.map((c) => (c.id === savedCategory.id ? { ...c, name: savedCategory.name } : c))
       );
       setStatus({
         message: `Category "${savedCategory.name}" updated.`,
