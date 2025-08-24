@@ -145,3 +145,18 @@ class CategoryDetailView(APIView):
         category = self.get_object(pk)
         category.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+
+class CategoryProductsView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def put(self, request, pk):
+        if not request.user.is_admin:
+            return Response({'error': 'Admin required'}, status=403)
+        
+        category = get_object_or_404(Category, pk=pk)
+        product_ids = request.data.get('product_ids', [])
+        category.products.set(product_ids)
+        return Response({"message": "Products updated successfully"})
