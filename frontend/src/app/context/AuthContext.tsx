@@ -1,4 +1,3 @@
-// /app/context/AuthContext.tsx
 'use client';
 
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
@@ -38,10 +37,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const accessToken = localStorage.getItem('accessToken');
       if (accessToken) {
         try {
-          const { data } = await api.get('/api/user/', {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
-          setUser(data as User); 
+          // Use the 'api' utility for the request
+          const { data } = await api.get('/api/user/');
+          setUser(data as User); // Assert the type of the user data
         } catch (error) {
           console.error("Failed to fetch user profile, clearing access token.", error);
           localStorage.removeItem('accessToken');

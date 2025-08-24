@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import api from "@/app/utils/api";
 import {
   Package,
@@ -13,18 +13,28 @@ import {
 import Image from "next/image";
 import ProductEditModal from "./ProductEditModal";
 
-interface Category {
+// --- MODIFIED: Interface for the paginated API response ---
+interface PaginatedResponse<T> {
+  count: number;
+  total_pages: number;
+  current_page: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+export interface Category {
   id: number;
   name: string;
 }
 
-interface Product {
+export interface Product {
   id: number;
   name: string;
   description: string;
   price: number;
   stock_quantity: number;
-  category: Category;
+  categories: Category[]; 
   image_url: string | null;
   image?: string | null;
 }
@@ -49,29 +59,39 @@ const ProductsViewModify = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [status, setStatus] = useState<Status | null>(null);
-  const hasFetched = useRef(false);
+
+  // --- NEW: State for pagination ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // State for managing the edit modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // Initial data fetch
+  // --- MODIFIED: useEffect to re-fetch data when currentPage changes ---
   useEffect(() => {
-    if (hasFetched.current) return;
-    hasFetched.current = true;
-    fetchProducts();
-  }, []);
+    fetchProducts(currentPage);
+  }, [currentPage]);
 
-  const fetchProducts = async () => {
+  // --- MODIFIED: fetchProducts to handle pagination ---
+  const fetchProducts = async (page: number) => {
     setIsLoading(true);
     setStatus(null);
     try {
-      const response = await api.get<any[]>("/api/products/");
-      const formatted: Product[] = response.data.map((p) => ({
+      // Pass the page number as a query parameter
+      const response = await api.get<PaginatedResponse<any>>(
+        `/api/products/?page=${page}`
+      );
+      
+      const { results, total_pages } = response.data;
+
+      const formatted: Product[] = results.map((p: any) => ({
         ...p,
         price: parseFloat(p.price) || 0,
       }));
+
       setProducts(formatted);
+      setTotalPages(total_pages); // Update total pages from the API response
     } catch (err) {
       console.error("Failed to fetch products:", err);
       setStatus({
@@ -80,6 +100,19 @@ const ProductsViewModify = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // --- NEW: Handlers for pagination controls ---
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
     }
   };
 
@@ -96,9 +129,8 @@ const ProductsViewModify = () => {
     ) {
       try {
         await api.delete(`/api/products/${productId}/`);
-        setProducts((prevProducts) =>
-          prevProducts.filter((p) => p.id !== productId)
-        );
+        // Refetch the current page to ensure data consistency after deletion
+        fetchProducts(currentPage);
         setStatus({
           message: "Product deleted successfully.",
           type: "success",
@@ -196,21 +228,11 @@ const ProductsViewModify = () => {
           <table className="w-full text-sm text-left text-gray-600">
             <thead className="text-xs text-gray-700 uppercase bg-gray-50">
               <tr>
-                <th scope="col" className="px-6 py-3">
-                  Product
-                </th>
-                <th scope="col" className="px-6 py-3">
-                  Category
-                </th>
-                <th scope="col" className="px-6 py-3">
-                  Price
-                </th>
-                <th scope="col" className="px-6 py-3 text-center">
-                  Stock
-                </th>
-                <th scope="col" className="px-6 py-3 text-right">
-                  Actions
-                </th>
+                <th scope="col" className="px-6 py-3">Product</th>
+                <th scope="col" className="px-6 py-3">Category</th>
+                <th scope="col" className="px-6 py-3">Price</th>
+                <th scope="col" className="px-6 py-3 text-center">Stock</th>
+                <th scope="col" className="px-6 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -253,7 +275,9 @@ const ProductsViewModify = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      {product.category?.name || "N/A"}
+                      {product.categories?.length > 0
+                        ? product.categories.map((c) => c.name).join(", ")
+                        : "N/A"}
                     </td>
                     <td className="px-6 py-4 font-medium">
                       {formatCurrency(product.price)}
@@ -298,6 +322,32 @@ const ProductsViewModify = () => {
           </table>
         </div>
       </div>
+
+      {/* --- NEW: Pagination Controls UI --- */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white border-t rounded-b-lg shadow-md">
+          <div className="text-sm text-gray-700">
+            Page <span className="font-medium">{currentPage}</span> of{" "}
+            <span className="font-medium">{totalPages}</span>
+          </div>
+          <div className="flex-1 flex justify-end space-x-2">
+            <button
+              onClick={handlePrevPage}
+              disabled={currentPage === 1 || isLoading}
+              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages || isLoading}
+              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       <ProductEditModal
         isOpen={isModalOpen}

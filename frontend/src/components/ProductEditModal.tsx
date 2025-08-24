@@ -5,6 +5,8 @@ import api from "@/app/utils/api";
 import { X, UploadCloud } from "lucide-react";
 import Image from "next/image";
 
+// It's recommended to move these interfaces to a shared types file (e.g., /types/index.ts)
+// and import them here to avoid inconsistencies across your app.
 interface Category {
   id: number;
   name: string;
@@ -16,7 +18,7 @@ interface Product {
   description: string;
   price: number;
   stock_quantity: number;
-  category: Category;
+  categories: Category[]; // Correctly defined as an array
   image_url: string | null;
   image?: string | null;
 }
@@ -84,10 +86,12 @@ const ProductEditModal = ({
         description: product.description,
         price: String(product.price),
         stock_quantity: String(product.stock_quantity),
-        category_id: String(product.category?.id || ""),
+        // --- MODIFIED: Safely get the ID from the first category in the array ---
+        category_id: String(product.categories?.[0]?.id || ""),
       });
       setCurrentImageUrl(resolveImageUrl(product.image ?? product.image_url));
       setImageFile(null);
+      setError(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -105,7 +109,10 @@ const ProductEditModal = ({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setImageFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setImageFile(file);
+      // Create a temporary URL to preview the newly selected image
+      setCurrentImageUrl(URL.createObjectURL(file));
     }
   };
 
@@ -116,31 +123,36 @@ const ProductEditModal = ({
     setIsLoading(true);
     setError(null);
 
-    // Use FormData to handle multipart/form-data, including the file
     const submissionData = new FormData();
     submissionData.append("name", formData.name);
     submissionData.append("description", formData.description);
     submissionData.append("price", formData.price);
     submissionData.append("stock_quantity", formData.stock_quantity);
-    submissionData.append("category_id", formData.category_id);
+    
+    // Your backend likely expects a single ID for the category relationship
+    submissionData.append("category", formData.category_id);
 
-    // IMPORTANT: Only append the image if a new one has been selected.
-    // The backend will keep the old image if this field is omitted.
     if (imageFile) {
       submissionData.append("image", imageFile);
     }
 
     try {
-      // Use PUT request with FormData. Axios handles the headers.
       const response = await api.put<Product>(
         `/api/products/${product.id}/`,
         submissionData
       );
 
-      const updatedCategory =
-        categories.find((c) => c.id === parseInt(formData.category_id)) ||
-        product.category;
-      const finalProduct = { ...response.data, category: updatedCategory };
+      // --- MODIFIED: Reconstruct the final product object with the correct structure ---
+      const updatedCategory = categories.find(
+        (c) => c.id === parseInt(formData.category_id)
+      );
+      
+      const finalProduct: Product = {
+        ...response.data,
+        price: Number(response.data.price), // Ensure price is a number
+        // Ensure `categories` is an array for the onSave callback
+        categories: updatedCategory ? [updatedCategory] : product.categories,
+      };
 
       onSave(finalProduct);
       onClose();
@@ -179,7 +191,6 @@ const ProductEditModal = ({
               </div>
             )}
 
-            {/* Form fields for text data */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label
@@ -274,7 +285,6 @@ const ProductEditModal = ({
               </div>
             </div>
 
-            {/* Image Upload Section */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Product Image
@@ -303,9 +313,7 @@ const ProductEditModal = ({
                   >
                     <div className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm flex items-center justify-center text-sm">
                       <UploadCloud className="w-5 h-5 mr-2 text-gray-500" />
-                      <span>
-                        {imageFile ? "Change image" : "Upload new image"}
-                      </span>
+                      <span>{imageFile ? imageFile.name : "Upload new image"}</span>
                     </div>
                     <input
                       id="image"
@@ -317,16 +325,11 @@ const ProductEditModal = ({
                       accept="image/*"
                     />
                   </label>
-                  {imageFile && (
-                    <p className="text-xs text-gray-600 mt-2">
-                      New file selected: {imageFile.name}
-                    </p>
-                  )}
+                  <p className="text-xs text-gray-500 mt-2">
+                    Leave blank to keep the current image.
+                  </p>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Leave blank to keep the current image.
-              </p>
             </div>
 
             <div className="flex justify-end items-center pt-5 border-t border-gray-200 mt-6">
