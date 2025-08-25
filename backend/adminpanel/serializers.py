@@ -51,3 +51,7 @@ class OTPSerializer(serializers.ModelSerializer):
         model = OTP
         fields = ['otp_secret', 'otp_created', 'otp_count', 'is_verified']
         read_only_fields = ['otp_secret', 'otp_created', 'otp_count', 'is_verified']
+        
+        
+class EmptySerializer(serializers.Serializer):
+    pass

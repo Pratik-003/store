@@ -7,7 +7,7 @@ from django.contrib.auth import authenticate
 from django.core.mail import send_mail
 from django.conf import settings
 from .models import User, OTP
-from .serializers import (UserSerializer, RegisterSerializer, MyTokenObtainPairSerializer, OTPSerializer)
+from .serializers import (UserSerializer, RegisterSerializer, MyTokenObtainPairSerializer, OTPSerializer, EmptySerializer)
 import logging
 
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -163,6 +163,7 @@ class LoginView(APIView):
 @method_decorator(csrf_exempt, name='dispatch')
 class RefreshTokenView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = EmptySerializer
     
     def post(self, request):
         try:
@@ -263,6 +264,7 @@ class AdminDashboardView(APIView):
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]  # Changed from AllowAny
+    serializer_class = EmptySerializer
     def post(self, request):
         try:
             # Get refresh token from cookie and blacklist it
