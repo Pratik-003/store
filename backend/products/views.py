@@ -107,7 +107,6 @@ class CategoryListView(APIView):
 
 class CategoryDetailView(APIView):
     serializer_class = CategorySerializer
-    
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
@@ -118,7 +117,7 @@ class CategoryDetailView(APIView):
     
     def get(self, request, pk):
         category = self.get_object(pk)
-        serializer = CategorySerializer(category)
+        serializer = CategorySerializer(category)  
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     def put(self, request, pk):
