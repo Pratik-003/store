@@ -4,12 +4,13 @@ from profiles.models import Address
 
 class CartItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
+    product_image = serializers.CharField(source='product.image', read_only=True)
     product_price = serializers.DecimalField(source='product.price', read_only=True, max_digits=10, decimal_places=2)
     total_price = serializers.DecimalField(read_only=True, max_digits=10, decimal_places=2)
     
     class Meta:
         model = CartItem
-        fields = ['id', 'product', 'product_name', 'product_price', 'quantity', 'total_price']
+        fields = ['id', 'product', 'product_name', 'product_price', 'quantity', 'total_price','product_image']
 
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:

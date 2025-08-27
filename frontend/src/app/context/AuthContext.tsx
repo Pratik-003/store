@@ -1,67 +1,83 @@
-// in /app/context/AuthContext.tsx
-
 'use client';
 
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '../utils/api';
 
-
+//=========== INTERFACES ===========//
 interface User {
   id: number;
-  username: string; // <-- Added username
+  username: string;
   email: string;
   is_admin: boolean;
 }
 
-// 2. Define the shape of the context's value
 interface AuthContextType {
   user: User | null;
   loginUser: (email: string, password: string) => Promise<void>;
   logoutUser: () => Promise<void>;
+  cartItemCount: number;
+  fetchCartCount: () => Promise<void>;
 }
 
-// 3. Define the type for the component's props
 interface AuthProviderProps {
   children: ReactNode;
 }
 
+//=========== CONTEXT CREATION ===========//
 const AuthContext = createContext<AuthContextType | null>(null);
 
+//=========== PROVIDER COMPONENT ===========//
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [cartItemCount, setCartItemCount] = useState<number>(0);
   const router = useRouter();
 
+  const fetchCartCount = async () => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      setCartItemCount(0);
+      return;
+    }
+    try {
+      const response = await api.get('/api/orders/cart/');
+      setCartItemCount(response.data.items.length || 0);
+    } catch (error) {
+      console.error("Could not fetch cart count.", error);
+      setCartItemCount(0);
+    }
+  };
+
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchUserAndCart = async () => {
       setIsLoading(true);
       const accessToken = localStorage.getItem('accessToken');
       if (accessToken) {
         try {
-          // Use the 'api' utility for the request
           const { data } = await api.get('/api/auth/profile');
-          setUser(data as User); // Assert the type of the user data
+          setUser(data as User);
+          await fetchCartCount();
         } catch (error) {
-          console.error("Failed to fetch user profile, clearing access token.", error);
+          console.error("Session expired or invalid, logging out.", error);
           localStorage.removeItem('accessToken');
           setUser(null);
+          setCartItemCount(0);
         }
       }
       setIsLoading(false);
     };
 
-    fetchUser();
+    fetchUserAndCart();
   }, []);
 
   const loginUser = async (email: string, password: string) => {
     try {
       const { data } = await api.post('/api/auth/login/', { email, password });
-      
       localStorage.setItem('accessToken', data.access);
-      
       setUser(data.user as User);
-      
+      await fetchCartCount();
+
       if (data.user && (data.user as User).is_admin) {
         router.push("/admin");
       } else {
@@ -75,32 +91,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logoutUser = async () => {
     try {
-      // Call the server-side logout endpoint
       await api.post('/api/auth/logout/');
     } catch (error) {
-      // Log error but proceed with client-side logout anyway
       console.error("Server-side logout failed:", error);
     } finally {
-      // Always perform client-side cleanup
       localStorage.removeItem('accessToken');
       setUser(null);
+      setCartItemCount(0);
       router.push('/login');
     }
   };
 
-  const contextData: AuthContextType = { user, loginUser, logoutUser };
+  const contextData: AuthContextType = {
+    user,
+    loginUser,
+    logoutUser,
+    cartItemCount,
+    fetchCartCount,
+  };
 
   return (
     <AuthContext.Provider value={contextData}>
-      {isLoading ? null : children}
+      {!isLoading && children}
     </AuthContext.Provider>
   );
 };
 
+//=========== CUSTOM HOOKS ===========//
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+export const useCart = () => {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useCart must be used within an AuthProvider');
+    }
+    return context;
 };

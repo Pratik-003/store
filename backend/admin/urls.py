@@ -34,6 +34,7 @@ urlpatterns = [
     path('api/auth/', include('adminpanel.urls')),
     path('api/products/', include('products.urls')),
     path('api/profile/', include('profiles.urls')),
+    path('api/orders/', include('orders.urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0)),  # Swagger UI
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0)),
 ]
