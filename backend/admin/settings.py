@@ -23,7 +23,6 @@ INSTALLED_APPS = [
     
     # Third party
     'drf_spectacular',
-    'drf_yasg',
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
@@ -115,8 +114,8 @@ AUTH_USER_MODEL = 'adminpanel.User'
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -138,7 +137,7 @@ SIMPLE_JWT = {
     'AUTH_COOKIE': 'access',  # Could be used for access token if you wanted
     'AUTH_COOKIE_REFRESH': 'refresh', # Name for the refresh token cookie
     'AUTH_COOKIE_DOMAIN': None,
-    'AUTH_COOKIE_SECURE': True, # Will be False in development, True in production # Should be True in production (HTTPS)
+    'AUTH_COOKIE_SECURE': not DEBUG, # Will be False in development, True in production # Should be True in production (HTTPS)
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_PATH': '/',
     'AUTH_COOKIE_SAMESITE': 'Lax', # Or 'Strict'
@@ -159,18 +158,6 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'your-email-password')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'your-email@gmail.com')
 
 
-SWAGGER_SETTINGS = {
-    'SECURITY_DEFINITIONS': {
-        'Bearer': {
-            'type': 'apiKey',
-            'name': 'Authorization',
-            'in': 'header',
-            'description': 'JWT token in format: Bearer <token>'
-        }
-    },
-    'USE_SESSION_AUTH': False,  # Disable session auth if unused
-}
-
 # settings.py
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Your API',
@@ -190,8 +177,16 @@ CORS_ALLOWED_ORIGINS = [
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 
 # Disable these if not using session auth
-CSRF_COOKIE_HTTPONLY = False  
+CSRF_COOKIE_HTTPONLY = True 
 CSRF_USE_SESSIONS = False
+CSRF_COOKIE_SECURE = not DEBUG  # HTTPS only in production
+CSRF_COOKIE_SAMESITE = 'Lax'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True

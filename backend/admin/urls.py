@@ -1,46 +1,34 @@
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
 from adminpanel.views import MyTokenObtainPairView
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework import permissions
-from drf_yasg.views import get_schema_view
-from drf_yasg import openapi
 
-from rest_framework_simplejwt.authentication import JWTAuthentication  # Add this
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+# Choose one documentation library - recommended: drf-spectacular
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
-schema_view = get_schema_view(
-    openapi.Info(
-        title="PratikStore API",
-        default_version='v1',
-        description="API documentation for PratikStore",
-        terms_of_service="https://your-terms-url.com/",  # Add comma
-        contact=openapi.Contact(email="contact@pratikstore.com"),  # Fix parenthesis
-    ),
-    public=True,
-    permission_classes=(permissions.AllowAny,),
-    authentication_classes=[JWTAuthentication],  # Add this line
-) 
-    
-from rest_framework.documentation import include_docs_urls  
-    
 urlpatterns = [
+    # API Documentation - using drf-spectacular only
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('docs/', SpectacularSwaggerView.as_view(url_name='schema')),
+    path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    
+    # Admin site
     path('admin/', admin.site.urls),
+    
+    # JWT Authentication endpoints
+    path('api/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/token/blacklist/', TokenBlacklistView.as_view(), name='token_blacklist'),
+    
+    # Application endpoints
     path('api/auth/', include('adminpanel.urls')),
     path('api/products/', include('products.urls')),
     path('api/profile/', include('profiles.urls')),
     path('api/orders/', include('orders.urls')),
-    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0)),  # Swagger UI
-    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0)),
 ]
-
-
-
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

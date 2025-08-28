@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate
 from django.core.mail import send_mail
 from django.conf import settings
@@ -11,13 +12,8 @@ from .serializers import (UserSerializer, RegisterSerializer, MyTokenObtainPairS
 import logging
 
 from rest_framework_simplejwt.views import TokenObtainPairView
-
-from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.exceptions import TokenError
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from core.views import generate_tokens_for_user
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from rest_framework_simplejwt.utils import aware_utcnow
 
@@ -82,15 +78,25 @@ class VerifyOTPView(APIView):
                 user.is_active = True
                 user.save()
                 
-                # Generate tokens
-                refresh = MyTokenObtainPairSerializer.get_token(user)
+
+                refresh = RefreshToken.for_user(user)
                 
-                return Response({
+                response = Response({
                     'message': 'OTP verified successfully.',
                     'access': str(refresh.access_token),
-                    'refresh': str(refresh),
                     'user': UserSerializer(user).data
                 }, status=status.HTTP_200_OK)
+                
+                response.set_cookie(
+                    key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
+                    value=str(refresh), 
+                    httponly=True,
+                    secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                    samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
+                    max_age=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds(),
+                )
+                
+                return response
             else:
                 return Response(
                     {'error': 'Invalid OTP or OTP expired.'},
@@ -118,7 +124,6 @@ class LoginView(APIView):
             
             user = authenticate(email=email, password=password)
             
-            # --- Handle Expected Failures ---
             if user is None:
                 return Response(
                     {'error': 'Invalid credentials.'},
@@ -130,113 +135,32 @@ class LoginView(APIView):
                     {'error': 'Account not verified. Please verify your email.'},
                     status=status.HTTP_401_UNAUTHORIZED
                 )
-            tokens = generate_tokens_for_user(user)
+            serializer = self.serializer_class(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            tokens = serializer.validated_data
             
             response = Response({
                 'access': tokens['access'],
-                'user': tokens['user']
+                'user': UserSerializer(user).data,
+                'is_admin': user.is_admin
             }, status=status.HTTP_200_OK)
 
             response.set_cookie(
                 key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
-                value=tokens['refresh'],
-                httponly=True,
-                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
+                value=tokens['refresh'],  # Set as cookie
+                httponly=True,  # Critical: httpOnly prevents XSS
+                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],  # HTTPS only
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],  # Lax prevents CSRF
                 max_age=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds(),
             )
             
             return response
-
         except Exception as e:
-            # Log the full error for debugging
-            logger.error(f"An unexpected error occurred during login: {e}")
-            
-            # Return a generic server error to the user
+            logger.error(f"Login error: {e}")
             return Response(
                 {'error': 'A server error occurred. Please try again later.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class RefreshTokenView(APIView):
-    permission_classes = [AllowAny]
-    serializer_class = EmptySerializer
-    
-    def post(self, request):
-        try:
-            # 1. Get refresh token from cookie
-            refresh_token = (request.COOKIES.get('refresh') or request.COOKIES.get('refresh_token'))
-        
-            if not refresh_token:
-                return Response({'error': 'Refresh token missing'}, status=401)
-
-            # 2. Verify and decode the refresh token
-            refresh = RefreshToken(refresh_token, verify=True)
-            
-            # Verify token type is refresh
-            if refresh.payload.get('token_type') != 'refresh':
-                return Response({'error': 'Invalid token type'}, status=401)
-            
-            # Check if token is already blacklisted
-            if BlacklistedToken.objects.filter(token__jti=refresh['jti']).exists():
-                return Response({'error': 'Token has been revoked'}, status=401)
-
-            user_id = refresh.payload.get('user_id')
-            
-            if not user_id:
-                return Response({'error': 'Invalid token payload'}, status=401)
-
-            # 3. Get user from database
-            user = User.objects.get(id=user_id)
-            
-            # 4. Generate new tokens
-            tokens = generate_tokens_for_user(user)
-            
-            # 5. BLACKLIST the old refresh token
-            try:
-                refresh.blacklist()
-            except Exception as e:
-                logger.warning(f"Could not blacklist token: {e}")
-
-            # 6. Prepare response
-            response = Response({
-                'access': tokens['access'],
-                'refresh': tokens['refresh'],
-                'user': tokens['user']
-            }, status=200)
-
-            # 7. Set cookie
-            response.set_cookie(
-                key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
-                value=tokens['refresh'],
-                httponly=True,
-                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
-                max_age=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds(),
-            )          
-            
-            return response
-
-        except (TokenError, User.DoesNotExist) as e:
-            return Response({'error': 'Invalid refresh token'}, status=401)
-        except Exception as e:
-            logger.error(f"Refresh token error: {str(e)}")
-            return Response({'error': 'Token refresh failed'}, status=500)
-
-
-
-
-
-
-
-
-
-
-
-
 class UserProfileView(APIView):
     serializer_class = UserSerializer 
     permission_classes = [IsAuthenticated]
