@@ -15,7 +15,7 @@ class CartItemSerializer(serializers.ModelSerializer):
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
-        fields = ['product_name', 'product_price', 'quantity', 'total_price']
+        fields = ['product_name', 'product_price', 'quantity', 'total_price', 'product_image']
 
 class OrderSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -42,6 +42,18 @@ class PaymentSerializer(serializers.ModelSerializer):
 class CreateOrderSerializer(serializers.Serializer):
     address_id = serializers.IntegerField()
     payment_method = serializers.ChoiceField(choices=['upi', 'bank_transfer'])
+    
+    def validate_address_id(self, value):
+        # Check if address belongs to user
+        if not Address.objects.filter(id=value, user=self.context['request'].user).exists():
+            raise serializers.ValidationError("Invalid address")
+        return value
+
+class DirectPurchaseSerializer(serializers.Serializer):
+    address_id = serializers.IntegerField()
+    payment_method = serializers.ChoiceField(choices=['upi', 'bank_transfer'])
+    product_id = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1, default=1)
     
     def validate_address_id(self, value):
         # Check if address belongs to user

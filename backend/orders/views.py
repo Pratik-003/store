@@ -1,4 +1,4 @@
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -11,7 +11,7 @@ from profiles.models import Address
 from .serializers import (
     CartItemSerializer, OrderSerializer, 
     OrderDetailSerializer, PaymentSerializer,
-    CreateOrderSerializer
+    CreateOrderSerializer, DirectPurchaseSerializer
 )
 
 # ==================== CART VIEWS ====================
@@ -142,7 +142,7 @@ class CreateOrderView(APIView):
     @transaction.atomic
     def post(self, request):
         """Create order from cart and initiate payment"""
-        serializer = CreateOrderSerializer(data=request.data)
+        serializer = CreateOrderSerializer(data=request.data, context={'request': request})
         
         if not serializer.is_valid():
             return Response(
@@ -162,11 +162,18 @@ class CreateOrderView(APIView):
             )
 
         # Get shipping address
-        address = get_object_or_404(
-            Address, 
-            id=address_id, 
-            user=request.user
-        )
+        # address = get_object_or_404(
+        #     Address, 
+        #     id=address_id, 
+        #     user=request.user
+        # )
+        try:
+            address = Address.objects.get(id=address_id, user=request.user)
+        except Address.DoesNotExist:
+            return Response(
+                {'error': 'Invalid address or address does not belong to you'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Create order
         order = Order.objects.create(
@@ -177,11 +184,22 @@ class CreateOrderView(APIView):
 
         # Create order items from cart items
         for cart_item in cart.items.all():
+            if cart_item.product.stock_quantity < cart_item.quantity:
+                raise serializers.ValidationError(
+                    f"Insufficient stock for {cart_item.product.name}. "
+                    f"Available: {cart_item.product.stock_quantity}, "
+                    f"Requested: {cart_item.quantity}"
+                )
+            
+            # Reduce stock
+            cart_item.product.stock_quantity -= cart_item.quantity
+            cart_item.product.save()
             OrderItem.objects.create(
                 order=order,
                 product=cart_item.product,
                 product_name=cart_item.product.name,
                 product_price=cart_item.product.price,
+                product_image=str(cart_item.product.image) if cart_item.product.image else '',
                 quantity=cart_item.quantity,
                 total_price=cart_item.total_price
             )
@@ -207,6 +225,82 @@ class CreateOrderView(APIView):
         
         return Response(response_data, status=status.HTTP_201_CREATED)
 
+
+class DirectPurchaseView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        """Direct purchase without adding to cart"""
+        serializer = DirectPurchaseSerializer(data=request.data, context={'request': request})
+        
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get validated data
+        address_id = serializer.validated_data['address_id']
+        payment_method = serializer.validated_data['payment_method']
+        product_id = serializer.validated_data['product_id']
+        quantity = serializer.validated_data['quantity']
+
+        # Validate address
+        try:
+            address = Address.objects.get(id=address_id, user=request.user)
+        except Address.DoesNotExist:
+            return Response(
+                {'error': 'Invalid address'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Get product
+        product = get_object_or_404(Product, id=product_id)
+        
+        # Check stock
+        if product.stock_quantity < quantity:
+            return Response(
+                {'error': f'Insufficient stock for {product.name}. Available: {product.stock_quantity}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Create order
+        order = Order.objects.create(
+            user=request.user,
+            total_amount=product.price * quantity,
+            shipping_address=address
+        )
+
+        # Create order item
+        OrderItem.objects.create(
+            order=order,
+            product=product,
+            product_name=product.name,
+            product_price=product.price,
+            product_image=str(product.image) if product.image else '',
+            quantity=quantity,
+            total_price=product.price * quantity
+        )
+
+        # Reduce stock
+        product.stock_quantity -= quantity
+        product.save()
+
+        # Create payment
+        payment = Payment.objects.create(
+            order=order,
+            payment_method=payment_method,
+            amount=order.total_amount
+        )
+
+        # DON'T MODIFY CART AT ALL - user might have other items they want to keep
+
+        # Return response
+        order_serializer = OrderDetailSerializer(order)
+        payment_serializer = PaymentSerializer(payment)
+        
+        return Response({
+            'order': order_serializer.data,
+            'payment': payment_serializer.data
+        }, status=status.HTTP_201_CREATED)
 # ==================== PAYMENT VIEWS ====================
 
 class PaymentMethodsView(APIView):

@@ -103,6 +103,7 @@ class OrderItem(models.Model):
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
     product_name = models.CharField(max_length=255)  
     product_price = models.DecimalField(max_digits=10, decimal_places=2)  
+    product_image = models.CharField(max_length=500, blank=True) 
     quantity = models.PositiveIntegerField()
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
 
