@@ -139,15 +139,13 @@ const ProductEditModal = ({
         submissionData
       );
 
-      // --- MODIFIED: Reconstruct the final product object with the correct structure ---
       const updatedCategory = categories.find(
         (c) => c.id === parseInt(formData.category_id)
       );
       
       const finalProduct: Product = {
         ...response.data,
-        price: Number(response.data.price), // Ensure price is a number
-        // Ensure `categories` is an array for the onSave callback
+        price: Number(response.data.price), 
         categories: updatedCategory ? [updatedCategory] : product.categories,
       };
 

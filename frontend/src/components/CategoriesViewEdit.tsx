@@ -15,7 +15,6 @@ import {
   Search,
 } from "lucide-react";
 
-//=========== INTERFACES ===========//
 
 interface Product {
   id: number;
@@ -25,14 +24,14 @@ interface Product {
 interface Category {
   id: number;
   name: string;
-  products?: Product[]; // products are optional in the main list view
+  products?: Product[]; 
 }
 
 interface CategoryDetail extends Category {
-  products: Product[]; // products are required in the detail view
+  products: Product[]; 
 }
 
-// --- NEW: Interface for paginated API responses ---
+
 interface PaginatedResponse<T> {
   count: number;
   total_pages: number;
@@ -47,10 +46,9 @@ interface Status {
   type: "success" | "error";
 }
 
-//=========== EDIT/CREATE MODAL COMPONENT ===========//
 
 interface CategoryModalProps {
-  category: Category | null; // null for creating, Category object for editing
+  category: Category | null; 
   isOpen: boolean;
   onClose: () => void;
   onSave: (savedCategory: Category) => void;
@@ -87,15 +85,12 @@ const CategoryModal = ({
 
       const fetchCategoryDetails = async () => {
         try {
-          // Fetch both category details and all products in parallel
           const [catDetailsRes, allProductsRes] = await Promise.all([
             api.get<CategoryDetail>(`/api/products/categories/${category.id}/`),
-            // --- MODIFIED: Expect a PaginatedResponse, not a direct array ---
             api.get<PaginatedResponse<Product>>("/api/products/"),
           ]);
 
           const categoryDetails = catDetailsRes.data;
-          // --- MODIFIED: Extract products from the 'results' key ---
           const allProducts = allProductsRes.data.results;
 
           const assignedIds = new Set(
@@ -115,7 +110,6 @@ const CategoryModal = ({
       };
       fetchCategoryDetails();
     } else {
-      // Reset for "Create" mode
       setName("");
       setAssignedProducts([]);
       setAvailableProducts([]);
@@ -139,7 +133,6 @@ const CategoryModal = ({
 
     try {
       if (isEditing && category) {
-        // --- UPDATE LOGIC ---
         const nameUpdatePromise = api.put<Category>(
           `/api/products/categories/${category.id}/`,
           { name }
@@ -158,7 +151,6 @@ const CategoryModal = ({
         onSave(nameUpdateResponse.data);
 
       } else {
-        // --- CREATE LOGIC ---
         const response = await api.post<Category>("/api/products/categories/", {
           name,
         });
@@ -202,7 +194,6 @@ const CategoryModal = ({
           </div>
         </div>
 
-        {/* --- MODIFIED: Added id="category-form" --- */}
         <form id="category-form" onSubmit={handleSubmit} className="flex-grow overflow-y-auto">
           <div className="p-6 space-y-6">
             {error && (
@@ -228,7 +219,6 @@ const CategoryModal = ({
                         <p className="text-indigo-600 font-semibold animate-pulse">Loading Products...</p>
                     </div>
                   )}
-                  {/* Available Products Column */}
                   <div className="border rounded-lg p-3 flex flex-col">
                       <div className="relative mb-2">
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"/>
@@ -245,7 +235,6 @@ const CategoryModal = ({
                       </div>
                   </div>
 
-                  {/* Assigned Products Column */}
                   <div className="border rounded-lg p-3 flex flex-col">
                       <div className="relative mb-2">
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"/>
@@ -271,7 +260,7 @@ const CategoryModal = ({
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium bg-white border rounded-md hover:bg-gray-50">
             Cancel
           </button>
-           {/* --- MODIFIED: Removed onClick, rely on form's onSubmit --- */}
+
           <button type="submit" form="category-form" disabled={isLoading || isDetailsLoading} className="ml-3 inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed">
             {isLoading ? "Saving..." : "Save Changes"}
           </button>
@@ -282,7 +271,6 @@ const CategoryModal = ({
 };
 
 
-//=========== MAIN VIEW COMPONENT ===========//
 
 const CategoriesViewEdit = () => {
   const [categories, setCategories] = useState<Category[]>([]);

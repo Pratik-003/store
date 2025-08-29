@@ -13,7 +13,7 @@ import {
 import Image from "next/image";
 import ProductEditModal from "./ProductEditModal";
 
-// --- MODIFIED: Interface for the paginated API response ---
+
 interface PaginatedResponse<T> {
   count: number;
   total_pages: number;
@@ -60,25 +60,23 @@ const ProductsViewModify = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [status, setStatus] = useState<Status | null>(null);
 
-  // --- NEW: State for pagination ---
+
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // State for managing the edit modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // --- MODIFIED: useEffect to re-fetch data when currentPage changes ---
+ 
   useEffect(() => {
     fetchProducts(currentPage);
   }, [currentPage]);
 
-  // --- MODIFIED: fetchProducts to handle pagination ---
+  
   const fetchProducts = async (page: number) => {
     setIsLoading(true);
     setStatus(null);
     try {
-      // Pass the page number as a query parameter
       const response = await api.get<PaginatedResponse<any>>(
         `/api/products/?page=${page}`
       );
@@ -91,7 +89,7 @@ const ProductsViewModify = () => {
       }));
 
       setProducts(formatted);
-      setTotalPages(total_pages); // Update total pages from the API response
+      setTotalPages(total_pages); 
     } catch (err) {
       console.error("Failed to fetch products:", err);
       setStatus({
@@ -103,7 +101,7 @@ const ProductsViewModify = () => {
     }
   };
 
-  // --- NEW: Handlers for pagination controls ---
+
   const handleNextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1);
@@ -129,7 +127,6 @@ const ProductsViewModify = () => {
     ) {
       try {
         await api.delete(`/api/products/${productId}/`);
-        // Refetch the current page to ensure data consistency after deletion
         fetchProducts(currentPage);
         setStatus({
           message: "Product deleted successfully.",
@@ -323,7 +320,6 @@ const ProductsViewModify = () => {
         </div>
       </div>
 
-      {/* --- NEW: Pagination Controls UI --- */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white border-t rounded-b-lg shadow-md">
           <div className="text-sm text-gray-700">
