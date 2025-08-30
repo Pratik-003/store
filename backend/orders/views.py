@@ -14,8 +14,6 @@ from .serializers import (
     CreateOrderSerializer, DirectPurchaseSerializer
 )
 
-# ==================== CART VIEWS ====================
-
 class CartDetailView(APIView):
     permission_classes = [IsAuthenticated]
 

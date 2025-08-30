@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Order Status Update</title>
+</head>
+<body>
+    <h2>Order {{ order.order_number }} has been {{ status }}</h2>
+    
+    <p>Dear {{ order.user.first_name }},</p>
+    
+    <p>Your order <strong>{{ order.order_number }}</strong> has been <strong>{{ status }}</strong>.</p>
+    
+    {% if admin_notes %}
+    <p><strong>Admin Notes:</strong> {{ admin_notes }}</p>
+    {% endif %}
+    
+    <p>Order Details:</p>
+    <ul>
+        <li>Order Number: {{ order.order_number }}</li>
+        <li>Total Amount: ₹{{ order.total_amount }}</li>
+        <li>Status: {{ status|title }}</li>
+    </ul>
+    
+    <p>You can view your order details here: <a href="{{ order_url }}">{{ order_url }}</a></p>
+    
+    <p>Thank you for shopping with us!</p>
+    
+    <p>Best regards,<br>Your Store Team</p>
+</body>
+</html>
