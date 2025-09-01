@@ -34,12 +34,18 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    def validate(self, attrs):
-        data = super().validate(attrs)
-        data['user'] = UserSerializer(self.user).data
-        data['is_admin'] = self.user.is_admin
-               
-        return data
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        
+        # Use user.userid instead of the default id
+        token['user_id'] = str(user.id)
+        token['username'] = user.username
+        token['email'] = user.email
+        token['is_admin'] = user.is_admin
+        
+        return token
+
 
 class OTPSerializer(serializers.ModelSerializer):
     class Meta:

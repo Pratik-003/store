@@ -9,6 +9,8 @@ from django.core.mail import send_mail
 from django.conf import settings
 from .models import User, OTP
 from .serializers import (UserSerializer, RegisterSerializer, MyTokenObtainPairSerializer, OTPSerializer, EmptySerializer)
+
+from core.views import generate_tokens_for_user
 import logging
 
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -203,3 +205,71 @@ class LogoutView(APIView):
         # Clear the refresh token cookie
         response.delete_cookie(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
         return response
+
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class RefreshTokenView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = EmptySerializer
+    
+    def post(self, request):
+        try:
+            # 1. Get refresh token from cookie
+            refresh_token = (request.COOKIES.get('refresh') or request.COOKIES.get('refresh_token'))
+        
+            if not refresh_token:
+                return Response({'error': 'Refresh token missing'}, status=401)
+
+            # 2. Verify and decode the refresh token
+            refresh = RefreshToken(refresh_token, verify=True)
+            
+            # Verify token type is refresh
+            if refresh.payload.get('token_type') != 'refresh':
+                return Response({'error': 'Invalid token type'}, status=401)
+            
+            # Check if token is already blacklisted
+            if BlacklistedToken.objects.filter(token__jti=refresh['jti']).exists():
+                return Response({'error': 'Token has been revoked'}, status=401)
+
+            user_id = refresh.payload.get('user_id')
+            
+            if not user_id:
+                return Response({'error': 'Invalid token payload'}, status=401)
+
+            # 3. Get user from database
+            user = User.objects.get(id=user_id)
+            
+            # 4. Generate new tokens
+            tokens = generate_tokens_for_user(user)
+            
+            # 5. BLACKLIST the old refresh token
+            try:
+                refresh.blacklist()
+            except Exception as e:
+                logger.warning(f"Could not blacklist token: {e}")
+
+            # 6. Prepare response
+            response = Response({
+                'access': tokens['access'],
+                'refresh': tokens['refresh'],
+                'user': tokens['user']
+            }, status=200)
+
+            # 7. Set cookie
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
+                value=tokens['refresh'],
+                httponly=True,
+                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
+                max_age=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds(),
+            )          
+            
+            return response
+
+        except (TokenError, User.DoesNotExist) as e:
+            return Response({'error': 'Invalid refresh token'}, status=401)
+        except Exception as e:
+            logger.error(f"Refresh token error: {str(e)}")
+            return Response({'error': 'Token refresh failed'}, status=500)
