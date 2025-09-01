@@ -80,7 +80,7 @@ api.interceptors.response.use(
       try {
         // The server will automatically receive the refresh token from the cookie.
         const response = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}api/token/refresh/`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}api/auth/token/refresh/`,
           null, // No data needed in the body
           { withCredentials: true }
         );
