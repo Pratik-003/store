@@ -9,6 +9,7 @@ class AddressSerializer(serializers.ModelSerializer):
         model = Address
         fields = ['id', 'user', 'phone', 'address_type', 'street', 'city', 
                  'state', 'zip_code', 'is_default', 'created_at', 'full_address']
+        read_only_fields = ['user']
     
     def get_full_address(self, obj):
         return obj.get_full_address()
