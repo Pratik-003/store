@@ -14,7 +14,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import Address, PasswordReset
-from .serializers import AddressSerializer, ForgotPasswordSerializer, ResetPasswordSerializer, ResendOTPSerializer
+from .serializers import AddressSerializer, ForgotPasswordSerializer, ResetPasswordSerializer, ResendOTPSerializer, ChangePasswordSerializer
 
 from datetime import timedelta
 import logging
@@ -24,6 +24,7 @@ User = get_user_model()
 
 class AddressListView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = AddressSerializer
     @extend_schema(operation_id="AddressList")
     
     def get(self, request):
@@ -41,6 +42,7 @@ class AddressListView(APIView):
 
 class AddressDetailView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = AddressSerializer
     @extend_schema(operation_id="AddressDetailView")
     
     def get_object(self, pk, user):
@@ -65,6 +67,7 @@ class AddressDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 class ForgotPasswordView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = ForgotPasswordSerializer
     
     @transaction.atomic
     def post(self, request):
@@ -155,6 +158,7 @@ class ForgotPasswordView(APIView):
 
 class ResetPasswordView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = ResetPasswordSerializer
     
     @transaction.atomic
     def post(self, request):
@@ -218,6 +222,7 @@ class ResetPasswordView(APIView):
 
 class ResendOTPView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = ResendOTPSerializer
     
     def post(self, request):
         serializer = ResendOTPSerializer(data=request.data)
@@ -294,6 +299,7 @@ class ResendOTPView(APIView):
 
 class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = ChangePasswordSerializer
     
     @transaction.atomic
     def post(self, request):

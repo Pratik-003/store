@@ -150,6 +150,7 @@ class CategoryDetailView(APIView):
 
 class CategoryProductsView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = ProductSerializer
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
