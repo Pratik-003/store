@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // Import useRouter for redirection
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import api from "@/app/utils/api";
 import { useAuth, useCart as useCartContext } from "@/app/context/AuthContext";
 
+// --- (Interfaces and other components remain the same) ---
 //=========== INTERFACES ===========//
 interface CartItem {
   id: number;
@@ -120,17 +121,19 @@ const AddressSelection: React.FC<AddressSelectionProps> = ({ selectedAddressId, 
   );
 };
 
+
 //=========== MAIN CART PAGE COMPONENT ===========//
 const CartPage = () => {
   const { user } = useAuth();
   const { fetchCartCount } = useCartContext();
-  const router = useRouter(); // Initialize router
+  const router = useRouter();
   const [cart, setCart] = useState<CartApiResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
-  const [isPlacingOrder, setIsPlacingOrder] = useState(false); // State for payment processing
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
+  // --- (fetchCartData, handleUpdateQuantity, handleRemoveItem remain the same) ---
   const fetchCartData = async () => {
     if (!user) {
       setIsLoading(false);
@@ -175,7 +178,8 @@ const CartPage = () => {
     }
   };
 
-  // ✨ NEW: Handle Proceed to Pay
+
+  // ✨ MODIFIED: Handle Proceed to Pay
   const handleProceedToPay = async () => {
     if (!selectedAddressId) {
       alert("Please select a shipping address.");
@@ -187,9 +191,16 @@ const CartPage = () => {
         address_id: selectedAddressId,
         payment_method: "upi", // Hardcoded as requested
       });
-      const orderNumber = response.data.order_number;
-      // Redirect to the new payment page with order number
+
+      // ✅ STEP 1: Store the full API response in sessionStorage
+      sessionStorage.setItem('currentOrderDetails', JSON.stringify(response.data));
+
+      // Get order number for the URL
+      const orderNumber = response.data.order.order_number;
+
+      // ✅ STEP 2: Redirect to the payment page
       router.push(`/payment?order_number=${orderNumber}`);
+
     } catch (err: any) {
       console.error("Failed to create order:", err);
       alert(err.response?.data?.error || "Could not create order. Please try again.");
@@ -201,6 +212,7 @@ const CartPage = () => {
   const shippingCost = subtotal > 0 ? 50.0 : 0;
   const total = subtotal + shippingCost;
 
+  // --- (JSX for rendering remains the same) ---
   if (isLoading && !cart) {
     return (
       <>
@@ -233,7 +245,7 @@ const CartPage = () => {
                     {cart?.items.map((item) => (
                       <li key={item.id} className="flex py-6">
                         <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-gray-200">
-                          <img src={`${API_BASE_URL}/media/${item.product_image}`} alt={item.product_name} className="h-full w-full object-cover object-center" />
+                          <img src={`${API_BASE_URL}${item.product_image}`} alt={item.product_name} className="h-full w-full object-cover object-center" />
                         </div>
                         <div className="ml-4 flex flex-1 flex-col">
                           <div>
@@ -273,9 +285,9 @@ const CartPage = () => {
                   <button
                     onClick={handleProceedToPay}
                     disabled={!selectedAddressId || isPlacingOrder}
-                    className="mt-6 w-full bg-gray-800 text-white font-bold py-3 rounded-lg hover:bg-black transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                    className="mt-6 w-full bg-gray-800 text-white font-bold py-3 rounded-lg hover:bg-black transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 flex justify-center items-center"
                   >
-                    {isPlacingOrder ? <LoaderIcon /> : (selectedAddressId ? 'Proceed to Pay' : 'Select an Address')}
+                    {isPlacingOrder ? <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : (selectedAddressId ? 'Proceed to Pay' : 'Select an Address')}
                   </button>
                 </div>
               </div>
