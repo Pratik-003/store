@@ -15,6 +15,7 @@ from .serializers import (
 )
 
 class CartDetailView(APIView):
+    serializer_class = CartItemSerializer
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -32,6 +33,7 @@ class CartDetailView(APIView):
         return Response(response_data)
 
 class AddToCartView(APIView):
+    serializer_class = CartItemSerializer
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -63,6 +65,7 @@ class AddToCartView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 class UpdateCartItemView(APIView):
+    serializer_class = CartItemSerializer
     permission_classes = [IsAuthenticated]
 
     def put(self, request, item_id):
@@ -95,6 +98,7 @@ class UpdateCartItemView(APIView):
         return Response(serializer.data)
 
 class RemoveCartItemView(APIView):
+    serializer_class = CartItemSerializer
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, item_id):
@@ -113,6 +117,7 @@ class RemoveCartItemView(APIView):
 # ==================== ORDER VIEWS ====================
 
 class OrderListView(APIView):
+    
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -123,7 +128,7 @@ class OrderListView(APIView):
 
 class OrderDetailView(APIView):
     permission_classes = [IsAuthenticated]
-
+    serializer_class = OrderDetailSerializer
     def get(self, request, order_number):
         """Get detailed view of a specific order"""
         order = get_object_or_404(
@@ -136,7 +141,7 @@ class OrderDetailView(APIView):
 
 class CreateOrderView(APIView):
     permission_classes = [IsAuthenticated]
-
+    serializer_class = CreateOrderSerializer, OrderDetailSerializer, PaymentSerializer
     @transaction.atomic
     def post(self, request):
         """Create order from cart and initiate payment"""
@@ -226,7 +231,7 @@ class CreateOrderView(APIView):
 
 class DirectPurchaseView(APIView):
     permission_classes = [IsAuthenticated]
-
+    serialiser_class = DirectPurchaseSerializer, OrderDetailSerializer, PaymentSerializer
     @transaction.atomic
     def post(self, request):
         """Direct purchase without adding to cart"""
@@ -303,7 +308,7 @@ class DirectPurchaseView(APIView):
 
 class PaymentMethodsView(APIView):
     permission_classes = [IsAuthenticated]
-
+    serialiser_class = PaymentSerializer
     def get(self, request):
         """Get available payment methods"""
         methods = [
@@ -314,7 +319,7 @@ class PaymentMethodsView(APIView):
 
 class VerifyPaymentView(APIView):
     permission_classes = [IsAuthenticated]
-
+    serialiser_class = PaymentSerializer
     def post(self, request, order_number):
         """Verify payment with screenshot and UTR number"""
         order = get_object_or_404(
@@ -355,7 +360,7 @@ class VerifyPaymentView(APIView):
 
 class OrderStatusView(APIView):
     permission_classes = [IsAuthenticated]
-
+    serialser_class = OrderSerializer
     def get(self, request, order_number):
         """Get current status of an order"""
         order = get_object_or_404(
