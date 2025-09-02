@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>New Order Notification</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #f8f9fa; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #fff; border: 1px solid #dee2e6; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #6c757d; }
+        .order-details { margin-bottom: 20px; }
+        .order-details table { width: 100%; border-collapse: collapse; }
+        .order-details th, .order-details td { padding: 8px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        .button { display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>New Order Received</h1>
+        </div>
+        
+        <div class="content">
+            <p>Hello Admin,</p>
+            <p>A new order has been placed and requires your attention.</p>
+            
+            <div class="order-details">
+                <h3>Order Details:</h3>
+                <table>
+                    <tr>
+                        <th>Order Number:</th>
+                        <td>{{ order_number }}</td>
+                    </tr>
+                    <tr>
+                        <th>Customer:</th>
+                        <td>{{ customer_email }}</td>
+                    </tr>
+                    <tr>
+                        <th>Total Amount:</th>
+                        <td>₹{{ total_amount }}</td>
+                    </tr>
+                    <tr>
+                        <th>Order Status:</th>
+                        <td>{{ status_display }}</td>
+                    </tr>
+                    <tr>
+                        <th>Order Date:</th>
+                        <td>{{ order_date }}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <p>Please verify the payment and update the order status in the admin panel.</p>
+            
+            <p>
+                <a href="{{ admin_url }}" class="button">View Order in Admin</a>
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated notification. Please do not reply to this email.</p>
+            <p>© {% now "Y" %} {{ site_name }}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
