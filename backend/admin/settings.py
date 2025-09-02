@@ -177,6 +177,10 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'your-email-password')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'your-email@gmail.com')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', 'support@yourdomain.com')
+SITE_NAME = os.getenv('SITE_NAME', 'Pratik Store')
+ADMIN_BASE_URL = os.getenv('ADMIN_BASE_URL', 'http://localhost:8000/admin')
+
+
 
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 

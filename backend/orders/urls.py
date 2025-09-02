@@ -11,6 +11,7 @@ urlpatterns = [
     # Order endpoints
     path('order/create/', views.CreateOrderView.as_view(), name='create-order'),
     path('order/direct-purchase/', views.DirectPurchaseView.as_view(), name='direct-purchase'),
+    path('order/<str:order_number>/cancel/', views.CancelOrderView.as_view(), name='cancel-order'),
     path('order/', views.OrderListView.as_view(), name='order-list'),
     path('order/<str:order_number>/', views.OrderDetailView.as_view(), name='order-detail'),
     path('order/<str:order_number>/status/', views.OrderStatusView.as_view(), name='order-status'), 

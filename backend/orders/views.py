@@ -139,12 +139,29 @@ class OrderDetailView(APIView):
         serializer = OrderDetailSerializer(order)
         return Response(serializer.data)
 
+
+
+
+def has_pending_verification(user):
+    return Order.objects.filter(
+        user=user, 
+        status='pending_verification'
+    ).exists()
+
+
 class CreateOrderView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = CreateOrderSerializer, OrderDetailSerializer, PaymentSerializer
     @transaction.atomic
     def post(self, request):
         """Create order from cart and initiate payment"""
+        if has_pending_verification(request.user):
+            return Response(
+                {
+                    'error': 'You have an order pending payment verification. Please complete payment for that order or cancel it before creating a new order.'
+                }, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
         serializer = CreateOrderSerializer(data=request.data, context={'request': request})
         
         if not serializer.is_valid():
@@ -235,6 +252,13 @@ class DirectPurchaseView(APIView):
     @transaction.atomic
     def post(self, request):
         """Direct purchase without adding to cart"""
+        if has_pending_verification(request.user):
+            return Response(
+                {
+                    'error': 'You have an order pending payment verification. Please complete payment for that order or cancel it before creating a new order.'
+                }, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
         serializer = DirectPurchaseSerializer(data=request.data, context={'request': request})
         
         if not serializer.is_valid():
@@ -304,6 +328,46 @@ class DirectPurchaseView(APIView):
             'order': order_serializer.data,
             'payment': payment_serializer.data
         }, status=status.HTTP_201_CREATED)
+
+
+
+class CancelOrderView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @transaction.atomic
+    def post(self, request, order_number):
+        """Cancel an order that's pending verification"""
+        order = get_object_or_404(
+            Order, 
+            order_number=order_number, 
+            user=request.user
+        )
+        
+        if order.status != 'pending_verification':
+            return Response(
+                {'error': 'Only orders pending verification can be cancelled'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Restore product stock
+        for order_item in order.items.all():
+            if order_item.product:
+                order_item.product.stock_quantity += order_item.quantity
+                order_item.product.save()
+        
+        # Update order status
+        order.status = 'cancelled'
+        order.save()
+        
+        # Update payment status
+        if hasattr(order, 'payment'):
+            order.payment.status = 'failed'
+            order.payment.save()
+        
+        return Response(
+            {'message': 'Order cancelled successfully'},
+            status=status.HTTP_200_OK
+        )
 # ==================== PAYMENT VIEWS ====================
 
 class PaymentMethodsView(APIView):

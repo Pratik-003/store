@@ -1,6 +1,7 @@
 from django.db import models
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
 from django.conf import settings
+from django.template.loader import render_to_string
 
 from adminpanel.models import User
 from products.models import Product  
@@ -76,27 +77,36 @@ class Order(models.Model):
             self.send_admin_notification()
 
     def send_admin_notification(self):
+        admin_emails = User.objects.filter(is_admin=True, is_active=True).values_list('email', flat=True)
+        
+        if not admin_emails:
+            return  # No admin emails to send to
+        context = {
+            'order_number': self.order_number,
+            'customer_email': self.user.email,
+            'total_amount': self.total_amount,
+            'status_display': self.get_status_display(),
+            'order_date': self.created_at.strftime('%Y-%m-%d %H:%M'),
+            'admin_url': f"{getattr(settings, 'ADMIN_BASE_URL', 'https://yourdomain.com/admin')}/orders/order/{self.id}/",
+            'site_name': getattr(settings, 'SITE_NAME', 'Your Store')  # Update with your site name
+        }
+        
+        # Render HTML and text versions
+        html_content = render_to_string('emails/admin_order_notification.html', context)
+        text_content = render_to_string('emails/admin_order_notification.txt', context)
+        
+        # Create email
         subject = f'New Order Received: {self.order_number}'
-        message = f'''
-        New order placed!
-        
-        Order Number: {self.order_number}
-        Customer: {self.user.email}
-        Total Amount: ₹{self.total_amount}
-        Status: {self.get_status_display()}
-        
-        Please verify the payment and update the order status.
-        '''
-        
-        # Send to all admin users
-        admin_emails = User.objects.filter(is_admin=True).values_list('email', flat=True)
-        send_mail(
+        email = EmailMultiAlternatives(
             subject,
-            message,
+            text_content,
             settings.DEFAULT_FROM_EMAIL,
-            list(admin_emails),
-            fail_silently=False,
+            list(admin_emails)
         )
+        email.attach_alternative(html_content, "text/html")
+        
+        # Send email
+        email.send(fail_silently=False)
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
