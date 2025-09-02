@@ -71,42 +71,6 @@ class Order(models.Model):
             self.order_number = f'ORD{date_str}{new_num:04d}'
         
         super().save(*args, **kwargs)
-        
-        # Send email to admin on new order creation
-        if self._state.adding:  # Only on create, not update
-            self.send_admin_notification()
-
-    def send_admin_notification(self):
-        admin_emails = User.objects.filter(is_admin=True, is_active=True).values_list('email', flat=True)
-        
-        if not admin_emails:
-            return  # No admin emails to send to
-        context = {
-            'order_number': self.order_number,
-            'customer_email': self.user.email,
-            'total_amount': self.total_amount,
-            'status_display': self.get_status_display(),
-            'order_date': self.created_at.strftime('%Y-%m-%d %H:%M'),
-            'admin_url': f"{getattr(settings, 'ADMIN_BASE_URL', 'https://yourdomain.com/admin')}/orders/order/{self.id}/",
-            'site_name': getattr(settings, 'SITE_NAME', 'Your Store')  # Update with your site name
-        }
-        
-        # Render HTML and text versions
-        html_content = render_to_string('emails/admin_order_notification.html', context)
-        text_content = render_to_string('emails/admin_order_notification.txt', context)
-        
-        # Create email
-        subject = f'New Order Received: {self.order_number}'
-        email = EmailMultiAlternatives(
-            subject,
-            text_content,
-            settings.DEFAULT_FROM_EMAIL,
-            list(admin_emails)
-        )
-        email.attach_alternative(html_content, "text/html")
-        
-        # Send email
-        email.send(fail_silently=False)
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')

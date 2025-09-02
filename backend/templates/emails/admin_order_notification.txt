@@ -1,0 +1,20 @@
+NEW ORDER NOTIFICATION
+
+Hello Admin,
+
+A new order has been placed and requires your attention.
+
+Order Details:
+-------------
+Order Number: {{ order_number }}
+Customer: {{ customer_email }}
+Total Amount: ₹{{ total_amount }}
+Order Status: {{ status_display }}
+Order Date: {{ order_date }}
+
+Please verify the payment and update the order status in the admin panel.
+
+Admin Panel: {{ admin_url }}
+
+This is an automated notification. Please do not reply to this email.
+© {% now "Y" %} {{ site_name }}. All rights reserved.
