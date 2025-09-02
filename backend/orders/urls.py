@@ -9,11 +9,11 @@ urlpatterns = [
     path('cart/remove/<int:item_id>/', views.RemoveCartItemView.as_view(), name='remove-cart-item'),
     
     # Order endpoints
-    path('orders/', views.OrderListView.as_view(), name='order-list'),
-    path('orders/<str:order_number>/', views.OrderDetailView.as_view(), name='order-detail'),
-    path('orders/create/', views.CreateOrderView.as_view(), name='create-order'),
-    path('orders/<str:order_number>/status/', views.OrderStatusView.as_view(), name='order-status'),
-    path('orders/direct-purchase/', views.DirectPurchaseView.as_view(), name='direct-purchase'),  
+    path('order/create/', views.CreateOrderView.as_view(), name='create-order'),
+    path('order/direct-purchase/', views.DirectPurchaseView.as_view(), name='direct-purchase'),
+    path('order/', views.OrderListView.as_view(), name='order-list'),
+    path('order/<str:order_number>/', views.OrderDetailView.as_view(), name='order-detail'),
+    path('order/<str:order_number>/status/', views.OrderStatusView.as_view(), name='order-status'), 
     
     # Payment endpoints
     path('payment/methods/', views.PaymentMethodsView.as_view(), name='payment-methods'),
