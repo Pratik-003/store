@@ -142,11 +142,7 @@ class OrderDetailView(APIView):
 
 
 
-def has_pending_verification(user):
-    return Order.objects.filter(
-        user=user, 
-        status='pending_verification'
-    ).exists()
+
 
 
 class CreateOrderView(APIView):
@@ -154,14 +150,19 @@ class CreateOrderView(APIView):
     serializer_class = CreateOrderSerializer, OrderDetailSerializer, PaymentSerializer
     @transaction.atomic
     def post(self, request):
+
+        pending_order = Order.objects.filter(
+            user=request.user, 
+            status='pending_verification'
+        ).first()
         """Create order from cart and initiate payment"""
-        if has_pending_verification(request.user):
-            return Response(
-                {
-                    'error': 'You have an order pending payment verification. Please complete payment for that order or cancel it before creating a new order.'
-                }, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        if pending_order:
+            # Now you can safely access the 'order_number' attribute
+            error_response = {
+                'id': pending_order.order_number,
+                'error': 'You have an order pending payment verification. Please complete payment for that order or cancel it before creating a new order.'
+            }
+            return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
         serializer = CreateOrderSerializer(data=request.data, context={'request': request})
         
         if not serializer.is_valid():
@@ -252,13 +253,18 @@ class DirectPurchaseView(APIView):
     @transaction.atomic
     def post(self, request):
         """Direct purchase without adding to cart"""
-        if has_pending_verification(request.user):
-            return Response(
-                {
-                    'error': 'You have an order pending payment verification. Please complete payment for that order or cancel it before creating a new order.'
-                }, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        pending_order = Order.objects.filter(
+            user=request.user, 
+            status='pending_verification'
+        ).first()
+        """Create order from cart and initiate payment"""
+        if pending_order:
+            # Now you can safely access the 'order_number' attribute
+            error_response = {
+                'id': pending_order.order_number,
+                'error': 'You have an order pending payment verification. Please complete payment for that order or cancel it before creating a new order.'
+            }
+            return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
         serializer = DirectPurchaseSerializer(data=request.data, context={'request': request})
         
         if not serializer.is_valid():
