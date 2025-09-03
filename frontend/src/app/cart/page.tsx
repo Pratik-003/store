@@ -7,7 +7,6 @@ import Navbar from "@/components/Navbar";
 import api from "@/app/utils/api";
 import { useAuth, useCart as useCartContext } from "@/app/context/AuthContext";
 
-// --- (Interfaces and other components remain the same) ---
 //=========== INTERFACES ===========//
 interface CartItem {
   id: number;
@@ -37,6 +36,13 @@ interface Address {
   is_default: boolean;
 }
 
+// ✨ NEW: Interface for the pending order error
+interface PendingOrderError {
+  id: string; // This will be the order_number of the pending order
+  error: string;
+}
+
+
 //=========== UTILITY & ICONS ===========//
 const formatCurrency = (amount: string | number) =>
   new Intl.NumberFormat("en-IN", {
@@ -50,6 +56,8 @@ const PlusIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor
 const MinusIcon = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" /></svg>;
 const TrashIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
 const LoaderIcon = () => <svg className="animate-spin h-8 w-8 text-gray-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
+const WarningIcon = () => <svg className="h-12 w-12 text-amber-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>;
+
 
 //=========== ADDRESS SELECTION COMPONENT ===========//
 interface AddressSelectionProps {
@@ -122,6 +130,58 @@ const AddressSelection: React.FC<AddressSelectionProps> = ({ selectedAddressId, 
 };
 
 
+// ✨ NEW: Pending Order Modal Component
+interface PendingOrderModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  errorData: PendingOrderError | null;
+  onContinue: (orderNumber: string) => void;
+  onCancelAndRetry: (orderNumber: string) => void;
+  isProcessing: boolean;
+}
+
+const PendingOrderModal: React.FC<PendingOrderModalProps> = ({ isOpen, onClose, errorData, onContinue, onCancelAndRetry, isProcessing }) => {
+  if (!isOpen || !errorData) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+      <div className="bg-white rounded-lg shadow-xl p-6 m-4 max-w-md w-full text-center">
+        <WarningIcon />
+        <h3 className="text-xl font-bold text-gray-800 mt-4">Pending Payment</h3>
+        <p className="text-gray-600 my-4">{errorData.error}</p>
+        <div className="space-y-3">
+          <button
+            onClick={() => onContinue(errorData.id)}
+            disabled={isProcessing}
+            className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50"
+          >
+            {isProcessing ? 'Processing...' : `Pay for Order ${errorData.id}`}
+          </button>
+          <button
+            onClick={() => onCancelAndRetry(errorData.id)}
+            disabled={isProcessing}
+            className="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 disabled:opacity-50 flex justify-center items-center"
+          >
+            {isProcessing ? (
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            ) : (
+                'Cancel Previous Order & Continue'
+            )}
+          </button>
+           <button
+            onClick={onClose}
+            disabled={isProcessing}
+            className="w-full text-sm text-gray-600 hover:underline mt-2 disabled:opacity-50"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 //=========== MAIN CART PAGE COMPONENT ===========//
 const CartPage = () => {
   const { user } = useAuth();
@@ -133,8 +193,13 @@ const CartPage = () => {
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
-  // --- (fetchCartData, handleUpdateQuantity, handleRemoveItem remain the same) ---
+  // ✨ NEW: State for the pending order modal
+  const [pendingOrderError, setPendingOrderError] = useState<PendingOrderError | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isProcessingModalAction, setIsProcessingModalAction] = useState(false);
+
   const fetchCartData = async () => {
+    // ... (This function remains unchanged)
     if (!user) {
       setIsLoading(false);
       setError("Please log in to view your cart.");
@@ -158,6 +223,7 @@ const CartPage = () => {
   }, [user]);
 
   const handleUpdateQuantity = async (itemId: number, newQuantity: number) => {
+    // ... (This function remains unchanged)
     if (newQuantity < 1) return await handleRemoveItem(itemId);
     try {
       await api.put(`/api/orders/cart/update/${itemId}/`, { quantity: newQuantity });
@@ -169,6 +235,7 @@ const CartPage = () => {
   };
 
   const handleRemoveItem = async (itemId: number) => {
+    // ... (This function remains unchanged)
     try {
       await api.delete(`/api/orders/cart/remove/${itemId}/`);
       await fetchCartData();
@@ -178,8 +245,7 @@ const CartPage = () => {
     }
   };
 
-
-  // ✨ MODIFIED: Handle Proceed to Pay
+  // ✨ MODIFIED: Handle Proceed to Pay with new error handling logic
   const handleProceedToPay = async () => {
     if (!selectedAddressId) {
       alert("Please select a shipping address.");
@@ -189,22 +255,63 @@ const CartPage = () => {
     try {
       const response = await api.post("/api/orders/order/create/", {
         address_id: selectedAddressId,
-        payment_method: "upi", // Hardcoded as requested
+        payment_method: "upi", // Hardcoded
       });
 
-      // ✅ STEP 1: Store the full API response in sessionStorage
       sessionStorage.setItem('currentOrderDetails', JSON.stringify(response.data));
-
-      // Get order number for the URL
       const orderNumber = response.data.order.order_number;
-
-      // ✅ STEP 2: Redirect to the payment page
       router.push(`/payment?order_number=${orderNumber}`);
 
     } catch (err: any) {
-      console.error("Failed to create order:", err);
-      alert(err.response?.data?.error || "Could not create order. Please try again.");
+      // Check for the specific pending order error from the backend
+      if (err.response?.data?.id && err.response?.data?.error) {
+        setPendingOrderError(err.response.data);
+        setIsModalOpen(true);
+      } else {
+        console.error("Failed to create order:", err);
+        alert(err.response?.data?.error || "Could not create order. Please try again.");
+      }
+    } finally {
       setIsPlacingOrder(false);
+    }
+  };
+
+  // ✨ NEW: Handler to proceed with the previous pending order
+  const handleContinueWithPreviousOrder = async (orderNumber: string) => {
+    setIsProcessingModalAction(true);
+    try {
+        // Fetching the pending order details to populate session storage
+        const response = await api.get(`/api/orders/order/${orderNumber}/`);
+        sessionStorage.setItem('currentOrderDetails', JSON.stringify(response.data));
+        router.push(`/payment?order_number=${orderNumber}`);
+        setIsModalOpen(false);
+    } catch (error) {
+        console.error("Failed to fetch pending order details:", error);
+        alert("Could not retrieve pending order details. Please try again.");
+    } finally {
+        setIsProcessingModalAction(false);
+    }
+  };
+
+  // ✨ NEW: Handler to cancel the previous order and retry creating the new one
+  const handleCancelAndRetry = async (orderNumber: string) => {
+    setIsProcessingModalAction(true);
+    try {
+      // Step 1: Cancel the old order
+      await api.post(`/api/orders/order/${orderNumber}/cancel/`);
+      
+      // Step 2: Close the modal and retry creating the new order
+      setIsModalOpen(false);
+      setPendingOrderError(null);
+      
+      // Re-call the original function to create the new order
+      await handleProceedToPay();
+
+    } catch (error: any) {
+      console.error("Failed to cancel or create order:", error);
+      alert(error.response?.data?.message || "Failed to cancel the previous order. Please try again.");
+    } finally {
+      setIsProcessingModalAction(false);
     }
   };
 
@@ -212,7 +319,6 @@ const CartPage = () => {
   const shippingCost = subtotal > 0 ? 50.0 : 0;
   const total = subtotal + shippingCost;
 
-  // --- (JSX for rendering remains the same) ---
   if (isLoading && !cart) {
     return (
       <>
@@ -227,6 +333,15 @@ const CartPage = () => {
   return (
     <>
       <Navbar />
+      {/* ✨ RENDER THE MODAL */}
+      <PendingOrderModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        errorData={pendingOrderError}
+        onContinue={handleContinueWithPreviousOrder}
+        onCancelAndRetry={handleCancelAndRetry}
+        isProcessing={isProcessingModalAction}
+      />
       <div className="bg-slate-50 min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <h1 className="text-4xl font-serif font-bold text-gray-900 mb-8">Your Shopping Cart</h1>
