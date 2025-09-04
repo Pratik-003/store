@@ -421,6 +421,8 @@ class VerifyPaymentView(APIView):
         payment.payment_date = payment_date
         payment.transaction_ss = request.FILES.get('transaction_ss')
         payment.save()
+        order.status = 'processing'
+        order.save()
 
         # Order remains in pending_verification until admin approves
         return Response(

@@ -31,7 +31,7 @@ const Navbar = () => {
   const { cartItemCount } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
- 
+  
   useEffect(() => {
     if (isMenuOpen) {
       document.body.style.overflow = 'hidden';
@@ -74,29 +74,32 @@ const Navbar = () => {
               {user?.is_admin && <Link href="/admin" className={navLinkClasses}>Admin</Link>}
             </div>
 
-            {/* Desktop Auth & Cart */}
-            <div className="hidden md:flex items-center space-x-4">
-              {user ? (
-                <div className="flex items-center space-x-4">
-                  <Link href="/profile" className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                    <UserAvatar username={user.username} />
-                    <span className="text-sm font-medium text-gray-700">Hi, {user.username}</span>
-                  </Link>
-                  <button onClick={handleLogout} className="px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
-                    Logout
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <Link href="/login" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-indigo-600">Login</Link>
-                  <Link href="/sign-up" className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 shadow-sm">
-                    Sign Up
-                  </Link>
-                </div>
-              )}
+            {/* Right side items container */}
+            <div className="flex items-center space-x-4">
+              {/* Desktop Auth */}
+              <div className="hidden md:flex items-center space-x-4">
+                {user ? (
+                  <div className="flex items-center space-x-4">
+                    <Link href="/profile" className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                      <UserAvatar username={user.username} />
+                      <span className="text-sm font-medium text-gray-700">Hi, {user.username}</span>
+                    </Link>
+                    <button onClick={handleLogout} className="px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                      Logout
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Link href="/login" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-indigo-600">Login</Link>
+                    <Link href="/sign-up" className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 shadow-sm">
+                      Sign Up
+                    </Link>
+                  </div>
+                )}
+              </div>
 
-              {/* Cart */}
-              <div className="pl-4 ml-4 border-l border-gray-200">
+              {/* Cart (Visible on all screen sizes) - MOVED HERE */}
+              <div className="flex items-center">
                 <Link href="/cart" className="group -m-2 flex items-center p-2 relative">
                   <CartIcon />
                   {cartItemCount > 0 && (
@@ -106,14 +109,15 @@ const Navbar = () => {
                   )}
                 </Link>
               </div>
-            </div>
 
-            {/* Mobile Menu Button */}
-            <div className="md:hidden flex items-center">
-              <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-md text-gray-500 hover:text-gray-700">
-                <MenuIcon />
-              </button>
+              {/* Mobile Menu Button */}
+              <div className="md:hidden flex items-center">
+                <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-md text-gray-500 hover:text-gray-700">
+                  <MenuIcon />
+                </button>
+              </div>
             </div>
+            
           </div>
         </div>
       </nav>

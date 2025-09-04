@@ -5,6 +5,7 @@ from django.utils.html import strip_tags
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.db.models import Q
 
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -15,6 +16,7 @@ from orders.models import Order, OrderItem, Payment
 
 class AdminPendingOrdersView(APIView):
     permission_classes = [IsAuthenticated]
+    serialiser_class = None
     
     def get(self, request):
         """Get all orders pending verification (admin only)"""
@@ -24,9 +26,13 @@ class AdminPendingOrdersView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        pending_orders = Order.objects.filter(
-            status='pending_verification'
-        ).select_related('user', 'shipping_address', 'payment').prefetch_related('items')
+        pending_orders = (
+            Order.objects.filter(
+                Q(status='pending_verification') | Q(status='processing')
+            )
+            .select_related('user', 'shipping_address', 'payment')
+            .prefetch_related('items')
+        )
         
         # Custom serializer or build response manually
         orders_data = []
@@ -66,6 +72,7 @@ class AdminPendingOrdersView(APIView):
 
 class AdminOrderDetailView(APIView):
     permission_classes = [IsAuthenticated]
+    serialiser_class = None
     
     def get(self, request, order_number):
         """Get detailed order info for admin"""
@@ -136,6 +143,7 @@ class AdminOrderDetailView(APIView):
 
 class AdminUpdateOrderStatusView(APIView):
     permission_classes = [IsAuthenticated]
+    serialiser_class = None
     
     @transaction.atomic
     def post(self, request, order_number):
@@ -205,6 +213,7 @@ class AdminUpdateOrderStatusView(APIView):
 
 class AdminOrdersByStatusView(APIView):
     permission_classes = [IsAuthenticated]
+    serialiser_class = None
     
     def get(self, request):
         """Get orders filtered by status (admin only)"""
