@@ -157,12 +157,15 @@ class CreateOrderView(APIView):
         ).first()
         """Create order from cart and initiate payment"""
         if pending_order:
-            # Now you can safely access the 'order_number' attribute
-            error_response = {
-                'id': pending_order.order_number,
-                'error': 'You have an order pending payment verification. Please complete payment for that order or cancel it before creating a new order.'
-            }
-            return Response(error_response, status=status.HTTP_400_BAD_REQUEST)
+            order_serializer = OrderDetailSerializer(pending_order)
+            payment_serializer = PaymentSerializer(pending_order.payment)
+            
+            return Response({
+                'order': order_serializer.data,
+                'payment': payment_serializer.data,
+                'message': 'You have a pending order. Please complete payment for that order first.',
+                'has_pending_order': True
+            }, status=status.HTTP_409_CONFLICT)
         serializer = CreateOrderSerializer(data=request.data, context={'request': request})
         
         if not serializer.is_valid():
@@ -181,13 +184,6 @@ class CreateOrderView(APIView):
                 {'error': 'Cart is empty'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        # Get shipping address
-        # address = get_object_or_404(
-        #     Address, 
-        #     id=address_id, 
-        #     user=request.user
-        # )
         try:
             address = Address.objects.get(id=address_id, user=request.user)
         except Address.DoesNotExist:
@@ -334,6 +330,36 @@ class DirectPurchaseView(APIView):
             'order': order_serializer.data,
             'payment': payment_serializer.data
         }, status=status.HTTP_201_CREATED)
+
+class PendingOrderDetailView(APIView):
+    """Get details of user's pending order for payment"""
+    permission_classes = [IsAuthenticated]
+    serialiser_class = OrderDetailSerializer, PaymentSerializer
+    
+    def get(self, request):
+        # Get user's pending verification order
+        pending_order = Order.objects.filter(
+            user=request.user, 
+            status='pending_verification'
+        ).first()
+        
+        if not pending_order:
+            return Response(
+                {'error': 'No pending orders found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Serialize order and payment details
+        order_serializer = OrderDetailSerializer(pending_order)
+        payment_serializer = PaymentSerializer(pending_order.payment)
+        
+        response_data = {
+            'order': order_serializer.data,
+            'payment': payment_serializer.data,
+            'message': 'You have a pending order. Please complete payment or cancel it.'
+        }
+        
+        return Response(response_data)
 
 
 
