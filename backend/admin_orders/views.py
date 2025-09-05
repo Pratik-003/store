@@ -41,15 +41,16 @@ class AdminPendingOrdersView(APIView):
                 'order_number': order.order_number,
                 'user': {
                     'email': order.user.email,
-                    'phone': order.user.phone_number,  # Add phone field to your User model
-                    'name': f"{order.user.first_name} {order.user.last_name}"
+                    # 'phone': order.user.phone_number,  # Add phone field to your User model
+                    'name': order.user.username
                 },
                 'shipping_address': {
                     'street': order.shipping_address.street,
                     'city': order.shipping_address.city,
                     'state': order.shipping_address.state,
                     'zip_code': order.shipping_address.zip_code,
-                    'country': order.shipping_address.country
+                    # 'country': order.shipping_address.country,
+                    'phone' : order.shipping_address.phone
                 } if order.shipping_address else None,
                 'payment': {
                     'method': order.payment.get_payment_method_display(),
@@ -95,8 +96,7 @@ class AdminOrderDetailView(APIView):
                 'id': order.user.id,
                 'email': order.user.email,
                 'phone': getattr(order.user, 'phone_number', 'Not provided'),
-                'name': f"{order.user.first_name} {order.user.last_name}",
-                'date_joined': order.user.date_joined
+                'name': order.user.username
             },
             'shipping_address': {
                 'id': order.shipping_address.id,
