@@ -28,7 +28,7 @@ class AdminPendingOrdersView(APIView):
         
         pending_orders = (
             Order.objects.filter(
-                Q(status='pending_verification') | Q(status='processing')
+                 Q(status='processing')
             )
             .select_related('user', 'shipping_address', 'payment')
             .prefetch_related('items')
@@ -104,7 +104,7 @@ class AdminOrderDetailView(APIView):
                 'city': order.shipping_address.city,
                 'state': order.shipping_address.state,
                 'zip_code': order.shipping_address.zip_code,
-                'country': order.shipping_address.country,
+                # 'country': order.shipping_address.country,
                 'phone': order.shipping_address.phone
             } if order.shipping_address else None,
             'payment': {
@@ -115,7 +115,7 @@ class AdminOrderDetailView(APIView):
                 'utr_number': order.payment.utr_number,
                 'payment_date': order.payment.payment_date,
                 'transaction_ss': order.payment.transaction_ss.url if order.payment.transaction_ss else None,
-                'admin_notes': order.payment.admin_notes,
+                # 'admin_notes': order.payment.admin_notes,
                 'created_at': order.payment.created_at
             },
             'items': [{
@@ -164,7 +164,7 @@ class AdminUpdateOrderStatusView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        if order.status != 'pending_verification':
+        if order.status != 'processing':
             return Response(
                 {'error': 'Order is not in pending verification status'}, 
                 status=status.HTTP_400_BAD_REQUEST

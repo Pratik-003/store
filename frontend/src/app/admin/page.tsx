@@ -7,12 +7,8 @@ import {
   PlusCircle,
   Settings,
   UserCircle,
-  Menu,
-  DollarSign,
-  Users,
-  ShoppingCart,
   FolderPlus,
-  LogOut, // <-- Import LogOut icon
+  LogOut, 
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -21,15 +17,11 @@ import AddCategoryForm from '@/components/AddCategoryForm';
 import AddProductForm from '@/components/AddProductForm';
 import ProductsViewModify from '@/components/ProductsView';
 import CategoriesViewEdit from '@/components/CategoriesViewEdit';
+import OrderViewEdit from '@/components/OrderViewEdit';
 
-function StatCard({ icon, title, value, change }) { /* ... no changes ... */ }
-function Header({ toggleSidebar, pageTitle }) { /* ... no changes ... */ }
 
-// =================================================================
-//  Sidebar Component - MODIFIED
-// =================================================================
 function Sidebar({ isSidebarOpen, setActiveView, activeView }) {
-  const { user, logoutUser } = useAuth(); // <-- Use the auth context
+  const { user, logoutUser } = useAuth(); 
 
   const menuItems = [
     { name: 'Dashboard', view: 'dashboard', icon: LayoutDashboard },
@@ -94,13 +86,9 @@ function Sidebar({ isSidebarOpen, setActiveView, activeView }) {
 }
 
 
-function DashboardView() { /* ... no changes ... */ }
-function SettingsView() { /* ... no changes ... */ }
 
 
-// =================================================================
-//  Main Admin Page Component
-// =================================================================
+
 export default function AdminPage() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
@@ -112,14 +100,14 @@ export default function AdminPage() {
     addProduct: 'Add New Product',
     addCategory: 'Add New Category',
     products: 'Manage Products',
-    categories: 'Manage Categories', // Corrected typo from 'cachesories'
+    categories: 'Manage Categories', 
     settings: 'Settings',
   };
 
   const renderContent = () => {
     switch (activeView) {
       case 'dashboard':
-        return <DashboardView />;
+        return <OrderViewEdit/>
       case 'addProduct':
         return <AddProductForm />;
       case 'addCategory':
@@ -128,10 +116,8 @@ export default function AdminPage() {
         return <ProductsViewModify />
       case 'categories':
         return <CategoriesViewEdit />
-      case 'settings':
-        return <SettingsView />;
       default:
-        return <DashboardView />;
+        return <OrderViewEdit/>
     }
   };
 
@@ -151,7 +137,7 @@ export default function AdminPage() {
           ></div>
         )}
 
-        <Header toggleSidebar={toggleSidebar} pageTitle={viewTitles[activeView]} />
+       
         <main className="p-4 md:p-8">
           {renderContent()}
         </main>
