@@ -4,6 +4,7 @@ import React, { useEffect, FC } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import AddressManager from '@/components/AddressManager';
+import Navbar from '@/components/Navbar';
 
 // --- TYPE DEFINITIONS ---
 interface User {
@@ -21,6 +22,7 @@ const LogoutIcon: FC = () => <svg width="24" height="24" viewBox="0 0 24 24" fil
 const ProfileSidebar: FC<{ user: User; onLogout: () => void }> = ({ user, onLogout }) => {
     const userInitials = user.username.substring(0, 2).toUpperCase();
     return (
+        
         <div className="bg-white p-6 rounded-2xl shadow-sm h-full flex flex-col">
             <div className="text-center mb-8">
                 <div className="w-24 h-24 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-4">
@@ -84,6 +86,8 @@ const ProfilePage: FC = () => {
     }
 
     return (
+        <>
+        <Navbar/>
         <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
                 <header className="mb-8">
@@ -101,6 +105,7 @@ const ProfilePage: FC = () => {
                 </div>
             </div>
         </div>
+        </>
     );
 };
 
